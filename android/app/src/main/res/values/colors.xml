@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SPEC background. Must match SpecColors.bg so the native-to-Flutter
+         handoff is invisible. -->
+    <color name="spec_bg">#0A0B0C</color>
+</resources>

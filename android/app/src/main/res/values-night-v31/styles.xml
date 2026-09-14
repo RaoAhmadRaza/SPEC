@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ draws its own splash window; paint it the same solid
+         background, with no icon, so the handoff to Flutter is invisible. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowSplashScreenBackground">@color/spec_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@null</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@color/spec_bg</item>
+    </style>
+</resources>
