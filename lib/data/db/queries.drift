@@ -1,0 +1,26 @@
+import 'tables.drift';
+
+-- `o.**` gives a typed SpecObject alongside the joined extras, so the
+-- repository maps one result class instead of unpacking columns by name.
+objectSummaries:
+SELECT o.**, z.name AS zone_name,
+  (SELECT p.file_name FROM photos p
+     WHERE p.object_id = o.id ORDER BY p.sort_order LIMIT 1) AS photo_file_name
+FROM objects o LEFT JOIN zones z ON z.id = o.zone_id
+ORDER BY o.updated_at DESC;
+
+objectSummary(:id AS INT):
+SELECT o.**, z.name AS zone_name,
+  (SELECT p.file_name FROM photos p
+     WHERE p.object_id = o.id ORDER BY p.sort_order LIMIT 1) AS photo_file_name
+FROM objects o LEFT JOIN zones z ON z.id = o.zone_id
+WHERE o.id = :id;
+
+objectPhotoNames(:id AS INT):
+SELECT file_name FROM photos WHERE object_id = :id ORDER BY sort_order;
+
+-- Two counts in one statement, so the resting search screen reads the archive
+-- once rather than twice.
+archiveCounts:
+SELECT (SELECT COUNT(*) FROM objects) AS object_count,
+       (SELECT COUNT(*) FROM photos) AS photo_count;

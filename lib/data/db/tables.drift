@@ -1,0 +1,54 @@
+-- SPEC's whole store. Written as SQL rather than the Dart DSL because
+-- COLLATE NOCASE uniqueness, composite indices and ON DELETE cascades are
+-- native here and awkward there.
+
+CREATE TABLE zones (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  sort_order INTEGER NOT NULL,
+  created_at DATETIME NOT NULL
+);
+
+-- `AS SpecObject` keeps the generated row class from colliding with Dart's
+-- own Object.
+CREATE TABLE objects (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,                      -- product|device|car|home|clothing|other
+  zone_id INTEGER REFERENCES zones(id) ON DELETE SET NULL,
+  sub_location TEXT,
+  spec_kind TEXT NOT NULL,                 -- model|serial|filter|battery|other
+  spec_value TEXT NOT NULL,                -- 'B22', the hero string
+  subtitle TEXT,
+  -- A copied string, never a foreign key: it is what makes `bulb` return
+  -- Headlight, and a copy lets the shipped catalogue change between releases
+  -- without touching user rows.
+  library_term TEXT,
+  attributes TEXT NOT NULL DEFAULT '[]',   -- JSON, only ever read as one ordered set
+  purchased_from TEXT,                     -- 'IKEA', a vendor not a date
+  replaced_on TEXT,                        -- '2026-08-14', a calendar date
+  remind_every_months INTEGER,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  -- Last on purpose: schema v2 adds it with ALTER TABLE, which appends, so a
+  -- migrated database and a fresh one have the same column order.
+  notes TEXT                               -- a short free-text line, optional
+) AS SpecObject;
+
+-- SQLite does not index foreign keys on its own, so without this every zone
+-- delete becomes a full scan of objects.
+CREATE INDEX objects_zone ON objects (zone_id);
+CREATE INDEX objects_updated ON objects (updated_at DESC);
+
+-- Photos are a table because the collections count is a count(*) and files
+-- need the cascade. file_name only, never a path: iOS regenerates the app
+-- container UUID on every reinstall, so a stored path dangles tomorrow.
+CREATE TABLE photos (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  object_id INTEGER NOT NULL REFERENCES objects(id) ON DELETE CASCADE,
+  file_name TEXT NOT NULL UNIQUE,
+  sort_order INTEGER NOT NULL,
+  created_at DATETIME NOT NULL
+);
+
+CREATE INDEX photos_object ON photos (object_id, sort_order);
