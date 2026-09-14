@@ -1,0 +1,36 @@
+# Static analysis for SPEC.
+#
+# The three strict-* language flags are on deliberately and were turned on while
+# the codebase was still small. They are much harder to adopt after code
+# generation lands.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  exclude:
+    - build/**
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.drift.dart"
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
+
+linter:
+  rules:
+    # The codebase already does all of these; the rules lock them in.
+    - prefer_single_quotes
+    - require_trailing_commas
+    - always_declare_return_types
+    - directives_ordering
+    - sort_pub_dependencies
+    # These three matter once services and streams land.
+    - unawaited_futures
+    - avoid_slow_async_io
+    - cancel_subscriptions
