@@ -1,0 +1,702 @@
+[
+  {
+    "id": "bulb",
+    "name": "Bulb",
+    "category": "HOME",
+    "specLabel": "BASE",
+    "exampleSpec": "B22 · E27"
+  },
+  {
+    "id": "tyre",
+    "name": "Tyre",
+    "category": "CAR",
+    "specLabel": "SIZE",
+    "exampleSpec": "205/55 R16"
+  },
+  {
+    "id": "cartridge",
+    "name": "Cartridge",
+    "category": "DEVICES",
+    "specLabel": "MODEL",
+    "exampleSpec": "67XL · 305"
+  },
+  {
+    "id": "water-filter",
+    "name": "Water filter",
+    "category": "HOME",
+    "specLabel": "MODEL",
+    "exampleSpec": "LT1000P"
+  },
+  {
+    "id": "battery",
+    "name": "Battery",
+    "category": "DEVICES",
+    "specLabel": "TYPE",
+    "exampleSpec": "CR2032 · AA"
+  },
+  {
+    "id": "adapter",
+    "name": "Adapter",
+    "category": "DEVICES",
+    "specLabel": "OUTPUT",
+    "exampleSpec": "12V 2A"
+  },
+  {
+    "id": "sd-card",
+    "name": "SD card",
+    "category": "DEVICES",
+    "specLabel": "CAPACITY",
+    "exampleSpec": "32GB · V30"
+  },
+  {
+    "id": "bolt",
+    "name": "Bolt",
+    "category": "OTHER",
+    "specLabel": "THREAD",
+    "exampleSpec": "M10 × 1.5"
+  },
+  {
+    "id": "paint",
+    "name": "Paint",
+    "category": "HOME",
+    "specLabel": "COLOUR",
+    "exampleSpec": "#2E2A26"
+  },
+  {
+    "id": "fluorescent-tube",
+    "name": "Fluorescent tube",
+    "category": "HOME",
+    "specLabel": "SIZE",
+    "exampleSpec": "T8 · 1200MM"
+  },
+  {
+    "id": "downlight",
+    "name": "Downlight",
+    "category": "HOME",
+    "specLabel": "BASE",
+    "exampleSpec": "GU10 · 5W"
+  },
+  {
+    "id": "cooker-hood-filter",
+    "name": "Cooker hood filter",
+    "category": "HOME",
+    "specLabel": "SIZE",
+    "exampleSpec": "230 × 470MM"
+  },
+  {
+    "id": "vacuum-bag",
+    "name": "Vacuum bag",
+    "category": "HOME",
+    "specLabel": "TYPE",
+    "exampleSpec": "TYPE 30"
+  },
+  {
+    "id": "vacuum-filter",
+    "name": "Vacuum filter",
+    "category": "HOME",
+    "specLabel": "GRADE",
+    "exampleSpec": "HEPA 13"
+  },
+  {
+    "id": "air-purifier-filter",
+    "name": "Air purifier filter",
+    "category": "HOME",
+    "specLabel": "GRADE",
+    "exampleSpec": "H13 · 360MM"
+  },
+  {
+    "id": "fridge-filter",
+    "name": "Fridge filter",
+    "category": "HOME",
+    "specLabel": "MODEL",
+    "exampleSpec": "DA29-00020B"
+  },
+  {
+    "id": "tap-washer",
+    "name": "Tap washer",
+    "category": "HOME",
+    "specLabel": "SIZE",
+    "exampleSpec": "1/2\""
+  },
+  {
+    "id": "shower-head",
+    "name": "Shower head",
+    "category": "HOME",
+    "specLabel": "THREAD",
+    "exampleSpec": "1/2\" BSP"
+  },
+  {
+    "id": "flush-valve",
+    "name": "Flush valve",
+    "category": "HOME",
+    "specLabel": "SIZE",
+    "exampleSpec": "2\""
+  },
+  {
+    "id": "plug-fuse",
+    "name": "Plug fuse",
+    "category": "HOME",
+    "specLabel": "RATING",
+    "exampleSpec": "13A"
+  },
+  {
+    "id": "circuit-breaker",
+    "name": "Circuit breaker",
+    "category": "HOME",
+    "specLabel": "RATING",
+    "exampleSpec": "B32"
+  },
+  {
+    "id": "smoke-alarm",
+    "name": "Smoke alarm",
+    "category": "HOME",
+    "specLabel": "TYPE",
+    "exampleSpec": "10-YEAR LI"
+  },
+  {
+    "id": "door-hinge",
+    "name": "Door hinge",
+    "category": "HOME",
+    "specLabel": "SIZE",
+    "exampleSpec": "102MM"
+  },
+  {
+    "id": "cabinet-handle",
+    "name": "Cabinet handle",
+    "category": "HOME",
+    "specLabel": "CENTRES",
+    "exampleSpec": "128MM"
+  },
+  {
+    "id": "curtain-hook",
+    "name": "Curtain hook",
+    "category": "HOME",
+    "specLabel": "SIZE",
+    "exampleSpec": "22MM"
+  },
+  {
+    "id": "picture-hook",
+    "name": "Picture hook",
+    "category": "HOME",
+    "specLabel": "LOAD",
+    "exampleSpec": "20KG"
+  },
+  {
+    "id": "silicone-sealant",
+    "name": "Silicone sealant",
+    "category": "HOME",
+    "specLabel": "COLOUR",
+    "exampleSpec": "WHITE · 310ML"
+  },
+  {
+    "id": "tile-grout",
+    "name": "Tile grout",
+    "category": "HOME",
+    "specLabel": "COLOUR",
+    "exampleSpec": "ANTHRACITE"
+  },
+  {
+    "id": "wallpaper",
+    "name": "Wallpaper",
+    "category": "HOME",
+    "specLabel": "WIDTH",
+    "exampleSpec": "53CM ROLL"
+  },
+  {
+    "id": "bed-sheet",
+    "name": "Bed sheet",
+    "category": "HOME",
+    "specLabel": "SIZE",
+    "exampleSpec": "KING · 150 × 200"
+  },
+  {
+    "id": "pillowcase",
+    "name": "Pillowcase",
+    "category": "HOME",
+    "specLabel": "SIZE",
+    "exampleSpec": "50 × 75CM"
+  },
+  {
+    "id": "duvet",
+    "name": "Duvet",
+    "category": "HOME",
+    "specLabel": "TOG",
+    "exampleSpec": "10.5 TOG"
+  },
+  {
+    "id": "mattress",
+    "name": "Mattress",
+    "category": "HOME",
+    "specLabel": "SIZE",
+    "exampleSpec": "150 × 200CM"
+  },
+  {
+    "id": "rug",
+    "name": "Rug",
+    "category": "HOME",
+    "specLabel": "SIZE",
+    "exampleSpec": "160 × 230CM"
+  },
+  {
+    "id": "bin-bag",
+    "name": "Bin bag",
+    "category": "HOME",
+    "specLabel": "VOLUME",
+    "exampleSpec": "60L"
+  },
+  {
+    "id": "dishwasher-salt",
+    "name": "Dishwasher salt",
+    "category": "HOME",
+    "specLabel": "TYPE",
+    "exampleSpec": "GRANULAR"
+  },
+  {
+    "id": "washing-machine-hose",
+    "name": "Washing machine hose",
+    "category": "HOME",
+    "specLabel": "THREAD",
+    "exampleSpec": "3/4\" BSP"
+  },
+  {
+    "id": "gas-bottle",
+    "name": "Gas bottle",
+    "category": "HOME",
+    "specLabel": "WEIGHT",
+    "exampleSpec": "13KG"
+  },
+  {
+    "id": "radiator-valve",
+    "name": "Radiator valve",
+    "category": "HOME",
+    "specLabel": "PIPE",
+    "exampleSpec": "15MM"
+  },
+  {
+    "id": "lock-cylinder",
+    "name": "Lock cylinder",
+    "category": "HOME",
+    "specLabel": "SIZE",
+    "exampleSpec": "35/35"
+  },
+  {
+    "id": "headlight",
+    "name": "Headlight",
+    "category": "CAR",
+    "specLabel": "BULB",
+    "exampleSpec": "H7"
+  },
+  {
+    "id": "wiper-blade",
+    "name": "Wiper blade",
+    "category": "CAR",
+    "specLabel": "LENGTH",
+    "exampleSpec": "24\" · 16\""
+  },
+  {
+    "id": "engine-oil",
+    "name": "Engine oil",
+    "category": "CAR",
+    "specLabel": "GRADE",
+    "exampleSpec": "5W-30"
+  },
+  {
+    "id": "oil-filter",
+    "name": "Oil filter",
+    "category": "CAR",
+    "specLabel": "THREAD",
+    "exampleSpec": "M20 × 1.5"
+  },
+  {
+    "id": "air-filter",
+    "name": "Air filter",
+    "category": "CAR",
+    "specLabel": "SIZE",
+    "exampleSpec": "245 × 180MM"
+  },
+  {
+    "id": "cabin-filter",
+    "name": "Cabin filter",
+    "category": "CAR",
+    "specLabel": "SIZE",
+    "exampleSpec": "215 × 180MM"
+  },
+  {
+    "id": "spark-plug",
+    "name": "Spark plug",
+    "category": "CAR",
+    "specLabel": "GAP",
+    "exampleSpec": "14MM · 0.8"
+  },
+  {
+    "id": "car-battery",
+    "name": "Car battery",
+    "category": "CAR",
+    "specLabel": "CAPACITY",
+    "exampleSpec": "70AH · 640A"
+  },
+  {
+    "id": "brake-pads",
+    "name": "Brake pads",
+    "category": "CAR",
+    "specLabel": "THICKNESS",
+    "exampleSpec": "FRONT · 17MM"
+  },
+  {
+    "id": "coolant",
+    "name": "Coolant",
+    "category": "CAR",
+    "specLabel": "TYPE",
+    "exampleSpec": "G12++"
+  },
+  {
+    "id": "brake-fluid",
+    "name": "Brake fluid",
+    "category": "CAR",
+    "specLabel": "GRADE",
+    "exampleSpec": "DOT 4"
+  },
+  {
+    "id": "indicator-bulb",
+    "name": "Indicator bulb",
+    "category": "CAR",
+    "specLabel": "BULB",
+    "exampleSpec": "PY21W"
+  },
+  {
+    "id": "number-plate-bulb",
+    "name": "Number plate bulb",
+    "category": "CAR",
+    "specLabel": "BULB",
+    "exampleSpec": "W5W"
+  },
+  {
+    "id": "blade-fuse",
+    "name": "Blade fuse",
+    "category": "CAR",
+    "specLabel": "RATING",
+    "exampleSpec": "10A MINI"
+  },
+  {
+    "id": "screenwash",
+    "name": "Screenwash",
+    "category": "CAR",
+    "specLabel": "RATING",
+    "exampleSpec": "-20°C"
+  },
+  {
+    "id": "toner",
+    "name": "Toner",
+    "category": "DEVICES",
+    "specLabel": "MODEL",
+    "exampleSpec": "TN-2420"
+  },
+  {
+    "id": "usb-cable",
+    "name": "USB cable",
+    "category": "DEVICES",
+    "specLabel": "CONNECTOR",
+    "exampleSpec": "USB-C · 1M"
+  },
+  {
+    "id": "phone-charger",
+    "name": "Phone charger",
+    "category": "DEVICES",
+    "specLabel": "OUTPUT",
+    "exampleSpec": "USB-C 30W"
+  },
+  {
+    "id": "laptop-charger",
+    "name": "Laptop charger",
+    "category": "DEVICES",
+    "specLabel": "OUTPUT",
+    "exampleSpec": "65W · USB-C"
+  },
+  {
+    "id": "hdmi-cable",
+    "name": "HDMI cable",
+    "category": "DEVICES",
+    "specLabel": "VERSION",
+    "exampleSpec": "2.1 · 2M"
+  },
+  {
+    "id": "watch-battery",
+    "name": "Watch battery",
+    "category": "DEVICES",
+    "specLabel": "TYPE",
+    "exampleSpec": "SR626SW"
+  },
+  {
+    "id": "hearing-aid-battery",
+    "name": "Hearing aid battery",
+    "category": "DEVICES",
+    "specLabel": "SIZE",
+    "exampleSpec": "312"
+  },
+  {
+    "id": "screen-protector",
+    "name": "Screen protector",
+    "category": "DEVICES",
+    "specLabel": "SIZE",
+    "exampleSpec": "6.1\" · 9H"
+  },
+  {
+    "id": "earbud-tips",
+    "name": "Earbud tips",
+    "category": "DEVICES",
+    "specLabel": "SIZE",
+    "exampleSpec": "M · 11MM"
+  },
+  {
+    "id": "usb-drive",
+    "name": "USB drive",
+    "category": "DEVICES",
+    "specLabel": "CAPACITY",
+    "exampleSpec": "64GB · 3.2"
+  },
+  {
+    "id": "hard-drive",
+    "name": "Hard drive",
+    "category": "DEVICES",
+    "specLabel": "CAPACITY",
+    "exampleSpec": "2TB · 2.5\""
+  },
+  {
+    "id": "memory",
+    "name": "Memory",
+    "category": "DEVICES",
+    "specLabel": "TYPE",
+    "exampleSpec": "DDR4 · 16GB"
+  },
+  {
+    "id": "router",
+    "name": "Router",
+    "category": "DEVICES",
+    "specLabel": "STANDARD",
+    "exampleSpec": "WI-FI 6"
+  },
+  {
+    "id": "smart-bulb",
+    "name": "Smart bulb",
+    "category": "DEVICES",
+    "specLabel": "BASE",
+    "exampleSpec": "E27 · 9W"
+  },
+  {
+    "id": "extension-lead",
+    "name": "Extension lead",
+    "category": "DEVICES",
+    "specLabel": "LENGTH",
+    "exampleSpec": "4-WAY · 2M"
+  },
+  {
+    "id": "controller-battery",
+    "name": "Controller battery",
+    "category": "DEVICES",
+    "specLabel": "CAPACITY",
+    "exampleSpec": "1100MAH"
+  },
+  {
+    "id": "camera-battery",
+    "name": "Camera battery",
+    "category": "DEVICES",
+    "specLabel": "MODEL",
+    "exampleSpec": "NP-FW50"
+  },
+  {
+    "id": "printer-paper",
+    "name": "Printer paper",
+    "category": "DEVICES",
+    "specLabel": "SIZE",
+    "exampleSpec": "A4 · 80GSM"
+  },
+  {
+    "id": "label-tape",
+    "name": "Label tape",
+    "category": "DEVICES",
+    "specLabel": "WIDTH",
+    "exampleSpec": "12MM"
+  },
+  {
+    "id": "remote-battery",
+    "name": "Remote battery",
+    "category": "DEVICES",
+    "specLabel": "TYPE",
+    "exampleSpec": "AAA"
+  },
+  {
+    "id": "jeans",
+    "name": "Jeans",
+    "category": "CLOTHING",
+    "specLabel": "WAIST",
+    "exampleSpec": "W32 L32"
+  },
+  {
+    "id": "shirt",
+    "name": "Shirt",
+    "category": "CLOTHING",
+    "specLabel": "COLLAR",
+    "exampleSpec": "15.5\""
+  },
+  {
+    "id": "t-shirt",
+    "name": "T-shirt",
+    "category": "CLOTHING",
+    "specLabel": "SIZE",
+    "exampleSpec": "M"
+  },
+  {
+    "id": "shoes",
+    "name": "Shoes",
+    "category": "CLOTHING",
+    "specLabel": "SHOE",
+    "exampleSpec": "UK 9 · EU 43"
+  },
+  {
+    "id": "trainers",
+    "name": "Trainers",
+    "category": "CLOTHING",
+    "specLabel": "SHOE",
+    "exampleSpec": "US 10"
+  },
+  {
+    "id": "bra",
+    "name": "Bra",
+    "category": "CLOTHING",
+    "specLabel": "SIZE",
+    "exampleSpec": "34C"
+  },
+  {
+    "id": "suit-jacket",
+    "name": "Suit jacket",
+    "category": "CLOTHING",
+    "specLabel": "SIZE",
+    "exampleSpec": "40R"
+  },
+  {
+    "id": "belt",
+    "name": "Belt",
+    "category": "CLOTHING",
+    "specLabel": "LENGTH",
+    "exampleSpec": "90CM"
+  },
+  {
+    "id": "socks",
+    "name": "Socks",
+    "category": "CLOTHING",
+    "specLabel": "SIZE",
+    "exampleSpec": "6–11"
+  },
+  {
+    "id": "insoles",
+    "name": "Insoles",
+    "category": "CLOTHING",
+    "specLabel": "SHOE",
+    "exampleSpec": "UK 8"
+  },
+  {
+    "id": "shoelaces",
+    "name": "Shoelaces",
+    "category": "CLOTHING",
+    "specLabel": "LENGTH",
+    "exampleSpec": "120CM"
+  },
+  {
+    "id": "hat",
+    "name": "Hat",
+    "category": "CLOTHING",
+    "specLabel": "SIZE",
+    "exampleSpec": "57CM"
+  },
+  {
+    "id": "screw",
+    "name": "Screw",
+    "category": "OTHER",
+    "specLabel": "SIZE",
+    "exampleSpec": "4 × 40MM"
+  },
+  {
+    "id": "wall-plug",
+    "name": "Wall plug",
+    "category": "OTHER",
+    "specLabel": "SIZE",
+    "exampleSpec": "6MM"
+  },
+  {
+    "id": "nail",
+    "name": "Nail",
+    "category": "OTHER",
+    "specLabel": "LENGTH",
+    "exampleSpec": "50MM"
+  },
+  {
+    "id": "washer",
+    "name": "Washer",
+    "category": "OTHER",
+    "specLabel": "SIZE",
+    "exampleSpec": "M8"
+  },
+  {
+    "id": "drill-bit",
+    "name": "Drill bit",
+    "category": "OTHER",
+    "specLabel": "SIZE",
+    "exampleSpec": "8MM HSS"
+  },
+  {
+    "id": "saw-blade",
+    "name": "Saw blade",
+    "category": "OTHER",
+    "specLabel": "SIZE",
+    "exampleSpec": "24T · 190MM"
+  },
+  {
+    "id": "bike-tyre",
+    "name": "Bike tyre",
+    "category": "OTHER",
+    "specLabel": "SIZE",
+    "exampleSpec": "700 × 25C"
+  },
+  {
+    "id": "bike-tube",
+    "name": "Bike tube",
+    "category": "OTHER",
+    "specLabel": "VALVE",
+    "exampleSpec": "PRESTA 48MM"
+  },
+  {
+    "id": "bike-chain",
+    "name": "Bike chain",
+    "category": "OTHER",
+    "specLabel": "SPEED",
+    "exampleSpec": "11-SPEED"
+  },
+  {
+    "id": "glasses",
+    "name": "Glasses",
+    "category": "OTHER",
+    "specLabel": "PRESCRIPTION",
+    "exampleSpec": "-2.25 · PD 63"
+  },
+  {
+    "id": "contact-lenses",
+    "name": "Contact lenses",
+    "category": "OTHER",
+    "specLabel": "PRESCRIPTION",
+    "exampleSpec": "8.6 · -2.00"
+  },
+  {
+    "id": "padlock",
+    "name": "Padlock",
+    "category": "OTHER",
+    "specLabel": "SIZE",
+    "exampleSpec": "40MM"
+  },
+  {
+    "id": "hose-connector",
+    "name": "Hose connector",
+    "category": "OTHER",
+    "specLabel": "SIZE",
+    "exampleSpec": "1/2\""
+  }
+]
