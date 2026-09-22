@@ -74,13 +74,28 @@ class SearchCountRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
         children: [
-          AnimatedSwitcher(
-            duration: _countFadeDuration,
-            child: Text(count, key: ValueKey(count), style: SearchText.count),
+          // The count yields first: the timing beside it is short and fixed,
+          // and the two together overflowed a 320pt row at a raised scale.
+          Flexible(
+            child: AnimatedSwitcher(
+              duration: _countFadeDuration,
+              child: Text(
+                count,
+                key: ValueKey(count),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: SearchText.count,
+              ),
+            ),
           ),
           // No animation: it is a measurement, and a tween would be a lie.
           if (timing case final String measured)
-            Text(measured, style: SearchText.timing),
+            Text(
+              measured,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: SearchText.timing,
+            ),
         ],
       ),
     );

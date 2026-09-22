@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart'
     show InputDecoration, Material, MaterialType, TextField, TextInputAction;
@@ -12,11 +13,13 @@ import 'package:spec/search/search_pill.dart';
 import 'package:spec/search/search_result_list.dart';
 import 'package:spec/search/search_tokens.dart';
 import 'package:spec/search/search_waveform.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 /// 56 top for the status bar and 18 either side, the same gutter Home uses —
 /// which is what lets the pill fly between them without shifting sideways.
-const _pagePadding = EdgeInsets.fromLTRB(18, 56, 18, 0);
+const _pageSide = 18.0;
+const _pageTop = 56.0;
 
 const _blockGap = 22.0;
 
@@ -285,29 +288,51 @@ class _SearchScreenState extends State<SearchScreen>
         child: ColoredBox(
           color: SpecColors.bg,
           child: Padding(
-            padding: _pagePadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // The pill is the Hero, so it never fades or translates: it
-                // flies. Everything around it arrives.
-                _entrance(SearchHeaderRow(onCancel: widget.onCancel)),
-                const SizedBox(height: _blockGap),
-                _buildPill(),
-                const SizedBox(height: _blockGap),
-                Expanded(
-                  child: _entrance(
-                    SingleChildScrollView(
-                      controller: _scroll,
-                      padding: EdgeInsets.only(bottom: viewInsets + _blockGap),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: _buildBelowPill(),
+            // The whole region ends at the keyboard rather than only the
+            // scroll view padding around it. The pill holds the focused
+            // field, so it has to stay above the keyboard; padding the
+            // scroller alone left it stranded underneath with the results
+            // squeezed into what was left.
+            padding: EdgeInsets.fromLTRB(
+              _pageSide,
+              SpecLayout.topInset(context, design: _pageTop),
+              _pageSide,
+              viewInsets,
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) => Center(
+                child: SizedBox(
+                  // A 54pt thumb an arm's length from a 26pt spec is not a
+                  // result row, so the column is capped and centred.
+                  width: math.min(
+                    constraints.maxWidth,
+                    SpecLayout.maxContentWidth,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // The pill is the Hero, so it never fades or
+                      // translates: it flies. Everything around it arrives.
+                      _entrance(SearchHeaderRow(onCancel: widget.onCancel)),
+                      const SizedBox(height: _blockGap),
+                      _buildPill(),
+                      const SizedBox(height: _blockGap),
+                      Expanded(
+                        child: _entrance(
+                          SingleChildScrollView(
+                            controller: _scroll,
+                            padding: const EdgeInsets.only(bottom: _blockGap),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: _buildBelowPill(),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),

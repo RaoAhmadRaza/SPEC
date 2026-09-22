@@ -27,7 +27,7 @@ class SearchResultList extends StatelessWidget {
     return KeyedReflow<SearchResult>(
       items: results,
       keyOf: (result) => result.id,
-      cellHeight: kSearchRowHeight,
+      cellHeight: searchRowHeight(context),
       motion: _motion,
       itemBuilder: (context, result, index, isLeaving) => SearchResultRow(
         result: result,

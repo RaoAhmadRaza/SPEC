@@ -216,8 +216,9 @@ class SearchLimeButton extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        height: _buttonHeight,
+        constraints: const BoxConstraints(minHeight: _buttonHeight),
         alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
           color: SpecColors.accent,
           borderRadius: BorderRadius.circular(999),
@@ -229,7 +230,13 @@ class SearchLimeButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Text(label, style: SearchText.button),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: SearchText.button,
+        ),
       ),
     );
   }

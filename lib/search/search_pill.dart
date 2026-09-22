@@ -199,7 +199,11 @@ class SearchPillContent extends StatelessWidget {
         HomeIcon.search(size: _glyphSize, color: glyphColor),
         const SizedBox(width: _contentGap),
         if (scope case final String zone) ...[
-          _ScopeChip(zone: zone, onClear: onClearScope),
+          // The chip yields before the pill overflows: a long zone name used
+          // to push the field off the end.
+          Flexible(
+            child: _ScopeChip(zone: zone, onClear: onClearScope),
+          ),
           const SizedBox(width: _contentGap),
         ],
         Expanded(child: field),
@@ -227,7 +231,7 @@ class _ScopeChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        zoneNameHero(ZoneHeroLabel(name: zone, isChip: true)),
+        Flexible(child: zoneNameHero(ZoneHeroLabel(name: zone, isChip: true))),
         const SizedBox(width: _scopeClearGap),
         GestureDetector(
           onTap: onClear,

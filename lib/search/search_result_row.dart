@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -7,8 +9,11 @@ import 'package:spec/theme/spec_tokens.dart';
 
 /// 54pt thumb, 14pt of padding either side of it, and the 1pt divider under.
 ///
-/// Fixed, because the list positions its rows rather than laying them out in
-/// a column: a row that survives a re-query has to travel to its new index.
+/// The reference height, which [searchRowHeight] returns at scale 1.0.
+///
+/// The list positions its rows rather than laying them out in a column — a
+/// row that survives a re-query travels to its new index — so the height has
+/// to be known up front rather than discovered from the content.
 const kSearchRowHeight = 83.0;
 
 const _thumbSize = 54.0;
@@ -17,7 +22,37 @@ const _rowGap = 14.0;
 const _specGap = 16.0;
 const _nameToZone = 5.0;
 
+const _hairline = 1.0;
+
 const _pressDuration = Duration(milliseconds: 110);
+
+/// A row's height at the current text scale, measured from the two styles it
+/// draws — the same technique `libraryCellHeight` uses for its grid.
+///
+/// Never below [kSearchRowHeight], so the reference canvas is untouched: at
+/// scale 1.0 the 54pt thumb is taller than the text and sets the height
+/// anyway. Above it, the text wins and the rows grow instead of overlapping,
+/// which is what index-positioned rows do when the height lies.
+double searchRowHeight(BuildContext context) {
+  final scaler = MediaQuery.textScalerOf(context);
+  double lineOf(TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: 'Hg', style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+      maxLines: 1,
+    )..layout();
+    final height = painter.height;
+    painter.dispose();
+    return height;
+  }
+
+  final text = lineOf(SearchText.name) + _nameToZone + lineOf(SearchText.zone);
+  return math.max(
+    kSearchRowHeight,
+    _rowPadding.vertical + math.max(_thumbSize, text) + _hairline,
+  );
+}
 
 /// The lime moves with the best match rather than cutting to it.
 const _bestMatchDuration = Duration(milliseconds: 200);
@@ -78,7 +113,7 @@ class _SearchResultRowState extends State<SearchResultRow> {
       child: AnimatedContainer(
         duration: isMotionReduced ? Duration.zero : _pressDuration,
         curve: Curves.easeOut,
-        height: kSearchRowHeight,
+        height: searchRowHeight(context),
         padding: _rowPadding,
         decoration: BoxDecoration(
           color: _isPressed ? SearchColors.rowPress : null,
@@ -112,11 +147,15 @@ class _SearchResultRowState extends State<SearchResultRow> {
               ),
             ),
             const SizedBox(width: _specGap),
-            _Spec(
-              id: result.id,
-              spec: result.spec,
-              isBest: widget.isBest,
-              isMotionReduced: isMotionReduced,
+            // Flexible so a long spec yields instead of squeezing the name
+            // column to nothing and then overflowing the row.
+            Flexible(
+              child: _Spec(
+                id: result.id,
+                spec: result.spec,
+                isBest: widget.isBest,
+                isMotionReduced: isMotionReduced,
+              ),
             ),
           ],
         ),
@@ -178,6 +217,8 @@ class _Spec extends StatelessWidget {
         builder: (context, color, _) => Text(
           spec,
           textAlign: TextAlign.right,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: SearchText.spec.copyWith(color: color ?? target),
         ),
       ),
