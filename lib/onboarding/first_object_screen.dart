@@ -1,8 +1,10 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 import 'package:spec/widgets/tap_target.dart';
 
@@ -32,7 +34,8 @@ const _bobDistance = 9.0;
 const _scrimStops = [0.0, 0.30, 0.62, 1.0];
 const _scrimAlphas = [0.28, 0.42, 0.72, 0.88];
 
-const _contentPadding = EdgeInsets.fromLTRB(18, 56, 18, 0);
+const _contentSide = 18.0;
+const _contentTop = 56.0;
 const _blockGap = 18.0;
 const _headlineOffset = 4.0;
 
@@ -45,6 +48,12 @@ const _chipSpacing = 8.0;
 const _chipPadding = EdgeInsets.symmetric(horizontal: 14, vertical: 9);
 
 const _bottomInset = 24.0;
+
+/// 96 above the bottom inset clears the action button and its caption, so the
+/// last suggestion chip scrolls out from under them rather than hiding there.
+/// It tracks the text scale because the caption and the button's label both
+/// grow with it; without that the chips overlap the button again at 1.5.
+const _bottomBlockReserve = 96.0;
 const _bottomSideInset = 16.0;
 const _bottomGap = 12.0;
 
@@ -226,44 +235,92 @@ class _FirstObjectScreenState extends State<FirstObjectScreen>
         color: SpecColors.ink,
         decoration: TextDecoration.none,
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const ColoredBox(color: SpecColors.bg),
-          Image.asset(
-            'assets/images/first_object_bg.png',
-            fit: BoxFit.cover,
-            excludeFromSemantics: true,
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(gradient: _scrim),
-            child: const SizedBox.expand(),
-          ),
-          Padding(
-            padding: _contentPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: _blockGap + _headlineOffset),
-                _buildHeadline(),
-                const SizedBox(height: _blockGap + _bodyPull),
-                _buildBody(),
-                const SizedBox(height: _blockGap + _framePush),
-                _buildFrame(),
-                const SizedBox(height: _blockGap),
-                _buildSuggestions(),
-              ],
+      child: Builder(
+        builder: (context) {
+          final isExpanded = SpecLayout.isExpanded(context);
+          final bottomInset = SpecLayout.bottomInset(
+            context,
+            design: _bottomInset,
+          );
+          final reserve = MediaQuery.textScalerOf(context)
+              .scale(_bottomBlockReserve)
+              .clamp(
+                _bottomBlockReserve,
+                _bottomBlockReserve * SpecLayout.maxTextScale,
+              );
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              const ColoredBox(color: SpecColors.bg),
+              Image.asset(
+                'assets/images/first_object_bg.png',
+                fit: BoxFit.cover,
+                excludeFromSemantics: true,
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(gradient: _scrim),
+                child: const SizedBox.expand(),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  _contentSide,
+                  SpecLayout.topInset(context, design: _contentTop),
+                  _contentSide,
+                  0,
+                ),
+                child: _buildContent(isExpanded, bottomInset + reserve),
+              ),
+              Positioned(
+                left: _bottomSideInset,
+                right: _bottomSideInset,
+                bottom: bottomInset,
+                child: _buildBottomBlock(),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// The page content, in a scroll view whose bottom padding reserves the
+  /// band the action button sits in.
+  ///
+  /// Without it the column simply runs past the viewport: it sits in a
+  /// `Padding` inside an expanded `Stack`, which reports no overflow, so the
+  /// button silently covers the last chips instead of anything failing.
+  ///
+  /// No `Spacer` or `Expanded` goes in here — the scroll view hands its child
+  /// an unbounded height, and a flex child under that is a hard crash.
+  Widget _buildContent(bool isExpanded, double bottomReserve) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = isExpanded
+            ? math.min(constraints.maxWidth, SpecLayout.maxContentWidth)
+            : constraints.maxWidth;
+        return SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomReserve),
+          child: Center(
+            child: SizedBox(
+              width: width,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: _blockGap + _headlineOffset),
+                  _buildHeadline(),
+                  const SizedBox(height: _blockGap + _bodyPull),
+                  _buildBody(isExpanded),
+                  const SizedBox(height: _blockGap + _framePush),
+                  _buildFrame(),
+                  const SizedBox(height: _blockGap),
+                  _buildSuggestions(),
+                ],
+              ),
             ),
           ),
-          Positioned(
-            left: _bottomSideInset,
-            right: _bottomSideInset,
-            bottom: _bottomInset,
-            child: _buildBottomBlock(),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -304,22 +361,38 @@ class _FirstObjectScreenState extends State<FirstObjectScreen>
     );
   }
 
+  /// [BoxFit.scaleDown] only ever shrinks, so the 46pt token survives intact
+  /// at the reference canvas and a narrow phone or a raised text scale shrinks
+  /// the headline instead of clipping it.
   Widget _buildHeadline() {
     return _enterIn(
       _headline,
       _enterRiseHeadline,
-      const Text('REMEMBER\nONE THING.', style: SpecText.firstObjectHeadline),
+      const Align(
+        alignment: Alignment.centerLeft,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'REMEMBER\nONE THING.',
+            style: SpecText.firstObjectHeadline,
+            maxLines: 2,
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(bool isExpanded) {
     return _enterIn(
       _body,
       _enterRiseBody,
       Align(
         alignment: Alignment.centerLeft,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _bodyMaxWidth),
+          constraints: BoxConstraints(
+            maxWidth: isExpanded ? SpecLayout.maxContentWidth : _bodyMaxWidth,
+          ),
           child: const Text(
             "Pick something within arm's reach. "
             'The bulb above you is a good start.',
