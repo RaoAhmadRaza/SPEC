@@ -10,9 +10,11 @@ import 'package:spec/search/search_pill.dart';
 import 'package:spec/search/search_result_row.dart';
 import 'package:spec/search/search_screen.dart';
 import 'package:spec/search/search_tokens.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 import '../support/fonts.dart';
+import '../support/responsive.dart';
 
 /// The canvas every number in the design is measured against.
 const _canvas = Size(402, 874);
@@ -133,8 +135,192 @@ Rect _rectOf(Finder finder) {
   return box.localToGlobal(Offset.zero) & box.size;
 }
 
+/// A spec long enough to squeeze the name column and overflow the row.
+const _longSpec = 'MAINS-VOLTAGE DIMMABLE FILAMENT 2700K EXTRA WARM WHITE B22';
+
+/// Same frame as [_pump] on an arbitrary canvas, with real insets and scale.
+Future<void> _pumpResponsiveSearch(
+  WidgetTester tester,
+  Widget screen, {
+  required Size canvas,
+  EdgeInsets padding = EdgeInsets.zero,
+  EdgeInsets viewInsets = EdgeInsets.zero,
+  double textScale = 1.0,
+}) async {
+  tester.view
+    ..physicalSize = canvas * 3
+    ..devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: SpecColors.bg,
+      ),
+      home: MediaQuery(
+        data: MediaQueryData(
+          size: canvas,
+          padding: padding,
+          viewPadding: padding,
+          viewInsets: viewInsets,
+          textScaler: TextScaler.linear(textScale),
+        ),
+        child: Material(color: SpecColors.bg, child: screen),
+      ),
+    ),
+  );
+  for (var i = 0; i < 60; i++) {
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+}
+
 void main() {
   setUpAll(loadSpecFonts);
+
+  group('responsive', () {
+    testWidgets('row height is 83 at scale 1.0', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveSearch(
+        tester,
+        _screen(_FakeRunner(_designResults), isListingAll: true),
+        canvas: specReferenceCanvas,
+      );
+
+      // Assert: the computed height is a no-op at the reference scale.
+      expect(
+        searchRowHeight(tester.element(find.byType(SearchResultRow).first)),
+        kSearchRowHeight,
+      );
+      expect(
+        tester.getSize(find.byType(SearchResultRow).first).height,
+        kSearchRowHeight,
+      );
+    });
+
+    testWidgets('rows do not overlap at text scale 1.5', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveSearch(
+        tester,
+        _screen(_FakeRunner(_designResults), isListingAll: true),
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Assert: the list positions rows by index, so a height that lies
+      // makes them overlap rather than pushing each other down.
+      final rows = find.byType(SearchResultRow);
+      final rects = [
+        for (var i = 0; i < rows.evaluate().length; i++)
+          tester.getRect(rows.at(i)),
+      ];
+      expect(rects.length, greaterThan(1));
+      for (var i = 0; i + 1 < rects.length; i++) {
+        expect(
+          rects[i].bottom,
+          lessThanOrEqualTo(rects[i + 1].top),
+          reason: 'row $i overlaps row ${i + 1}',
+        );
+      }
+    });
+
+    testWidgets('a long spec never overflows the result row', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveSearch(
+        tester,
+        _screen(
+          _FakeRunner(const [
+            SearchResult(
+              id: 1,
+              name: 'Bedroom bulb',
+              zoneLine: 'HOME · CEILING',
+              spec: _longSpec,
+            ),
+          ]),
+          isListingAll: true,
+        ),
+        canvas: specCanvases['tiny']!,
+      );
+
+      // Assert
+      expect(find.byType(SearchResultRow), findsOneWidget);
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('the pill stays visible when the keyboard is up', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveSearch(
+        tester,
+        _screen(_FakeRunner(_designResults), isListingAll: true),
+        canvas: specCanvases['tiny']!,
+        viewInsets: const EdgeInsets.only(bottom: 300),
+      );
+
+      // Assert: the whole region shrank, so the pill is above the keyboard
+      // and results still have somewhere to be.
+      expect(
+        tester.getRect(find.byType(SearchPillShell)).bottom,
+        lessThanOrEqualTo(268.0),
+      );
+      expect(find.byType(SearchResultRow), findsWidgets);
+    });
+
+    testWidgets('a long scoped zone name does not overflow the pill', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveSearch(
+        tester,
+        _screen(
+          _FakeRunner(_designResults),
+          isListingAll: true,
+          scope: 'Z' * 40,
+        ),
+        canvas: specCanvases['tiny']!,
+      );
+
+      // Assert
+      expect(find.byType(SearchPillShell), findsOneWidget);
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('content is capped and centred on a landscape tablet', (
+      tester,
+    ) async {
+      // Arrange
+      final canvas = specCanvases['tabletLandscape']!;
+
+      // Act
+      await _pumpResponsiveSearch(
+        tester,
+        _screen(_FakeRunner(_designResults), isListingAll: true),
+        canvas: canvas,
+      );
+
+      // Assert
+      final row = tester.getRect(find.byType(SearchResultRow).first);
+      expect(row.width, lessThanOrEqualTo(SpecLayout.maxContentWidth));
+      expect(row.center.dx, closeTo(canvas.width / 2, 0.5));
+    });
+
+    testWidgets('ADD TO ZONE button does not clip a long zone name at scale '
+        '1.5', (tester) async {
+      // Arrange / Act: an empty scoped zone is what shows the button.
+      await _pumpResponsiveSearch(
+        tester,
+        _screen(_FakeRunner(const []), scope: 'Z' * 40, isListingAll: true),
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Assert
+      expect(find.byType(SearchLimeButton), findsOneWidget);
+      expectNoOverflow(tester);
+    });
+  });
 
   group('results', () {
     testWidgets('draws the three design rows with their specs and zones', (
