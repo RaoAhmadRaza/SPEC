@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 import 'package:spec/widgets/tap_target.dart';
 
@@ -51,7 +52,8 @@ const _cutRadiusCornerTopLeft = BorderRadius.only(
 const _scrimStops = [0.0, 0.45, 1.0];
 const _scrimAlphas = [0.22, 0.34, 0.55];
 
-const _contentPadding = EdgeInsets.fromLTRB(18, 56, 18, 0);
+const _contentSide = 18.0;
+const _contentTop = 56.0;
 const _sectionGap = 20.0;
 const _headlineOffset = 4.0;
 
@@ -214,50 +216,90 @@ class _HowItWorksScreenState extends State<HowItWorksScreen>
         color: SpecColors.ink,
         decoration: TextDecoration.none,
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const ColoredBox(color: SpecColors.bg),
-          Image.asset(
-            'assets/images/how_it_works_bg.png',
-            fit: BoxFit.cover,
-            excludeFromSemantics: true,
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(gradient: _scrim),
-            child: const SizedBox.expand(),
-          ),
-          Padding(
-            padding: _contentPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: _sectionGap + _headlineOffset),
-                _buildHeadline(),
-                const SizedBox(height: _sectionGap + _kickerPull),
-                _buildKicker(),
-                const SizedBox(height: _sectionGap + _stackOffset),
-                Expanded(
-                  child: Padding(
-                    // Reserve the bottom bar's band so the cards centre in the
-                    // space they actually have, not underneath the button.
-                    padding: const EdgeInsets.only(
-                      bottom: _bottomBarInset + _buttonHeight,
-                    ),
-                    child: Center(child: _buildCardStack()),
-                  ),
+      child: Builder(
+        builder: (context) {
+          // The reserve under the cards and the bar itself read the same
+          // inset, so they can never drift apart and let NEXT cover a card.
+          final bottomInset = SpecLayout.bottomInset(
+            context,
+            design: _bottomBarInset,
+          );
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              const ColoredBox(color: SpecColors.bg),
+              Image.asset(
+                'assets/images/how_it_works_bg.png',
+                fit: BoxFit.cover,
+                excludeFromSemantics: true,
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(gradient: _scrim),
+                child: const SizedBox.expand(),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  _contentSide,
+                  SpecLayout.topInset(context, design: _contentTop),
+                  _contentSide,
+                  0,
                 ),
-              ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildHeader(),
+                    const SizedBox(height: _sectionGap + _headlineOffset),
+                    _buildHeadline(),
+                    const SizedBox(height: _sectionGap + _kickerPull),
+                    _buildKicker(),
+                    const SizedBox(height: _sectionGap + _stackOffset),
+                    Expanded(
+                      child: Padding(
+                        // Reserve the bottom bar's band so the cards centre in
+                        // the space they actually have, not underneath the
+                        // button.
+                        padding: EdgeInsets.only(
+                          bottom: bottomInset + _buttonHeight,
+                        ),
+                        child: _buildCardRegion(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: bottomInset,
+                child: _buildBottomBar(),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// The card group, centred exactly as before wherever it fits and scrolled
+  /// only where it does not.
+  ///
+  /// Without the scroll view a stack taller than the region does not overflow
+  /// — `Center` lets it overhang and the `Stack` quietly clips the first and
+  /// last card. A silent clip ships; a scroll view does not.
+  Widget _buildCardRegion() {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: SpecLayout.maxContentWidth,
+              ),
+              child: _buildCardStack(),
             ),
           ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: _bottomBarInset,
-            child: _buildBottomBar(),
-          ),
-        ],
+        ),
       ),
     );
   }
