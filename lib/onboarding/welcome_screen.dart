@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 import 'package:spec/widgets/tap_target.dart';
 
@@ -44,8 +45,15 @@ const _glowRestValue = 0.5;
 const _scrimStops = [0.0, 0.35, 0.62, 1.0];
 const _scrimAlphas = [0.35, 0.45, 0.90, 0.99];
 
-const _contentPadding = EdgeInsets.fromLTRB(18, 56, 18, 0);
-const _messagePadding = EdgeInsets.only(bottom: 34);
+/// The viewport the chips were placed on. Each coordinate below is a
+/// fraction of these, so at 402 x 874 the arithmetic returns the original
+/// literal and nothing moves.
+const _designWidth = 402.0;
+const _designHeight = 874.0;
+
+const _contentSide = 18.0;
+const _contentTop = 56.0;
+const _messageBottom = 34.0;
 const _messageGap = 18.0;
 
 /// Extra breathing room above the button, on top of [_messageGap].
@@ -184,30 +192,76 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         color: SpecColors.ink,
         decoration: TextDecoration.none,
       ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const ColoredBox(color: SpecColors.bg),
-          Image.asset(
-            'assets/images/welcome_bg.png',
-            fit: BoxFit.cover,
-            excludeFromSemantics: true,
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(gradient: _scrim),
-            child: const SizedBox.expand(),
-          ),
-          _buildGlow(),
-          ..._buildChips(),
-          Padding(
-            padding: _contentPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [_buildHeader(), const Spacer(), _buildMessageBlock()],
+      // Geometry comes from the constraints, not from `MediaQuery.sizeOf`:
+      // the Stack is the box the chips are actually placed in, and it is not
+      // always the window. Device class still comes from `MediaQuery`, which
+      // is what `SpecLayout.isExpanded` reads.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final size = constraints.biggest;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              const ColoredBox(color: SpecColors.bg),
+              Image.asset(
+                'assets/images/welcome_bg.png',
+                fit: BoxFit.cover,
+                excludeFromSemantics: true,
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(gradient: _scrim),
+                child: const SizedBox.expand(),
+              ),
+              _buildGlow(),
+              ..._buildChips(size, SpecLayout.isExpanded(context)),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  _contentSide,
+                  SpecLayout.topInset(context, design: _contentTop),
+                  _contentSide,
+                  0,
+                ),
+                child: _buildContent(SpecLayout.isExpanded(context)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// The header, the gap, and the message block, in a scroll view that only
+  /// scrolls once they stop fitting.
+  ///
+  /// The gap is `spaceBetween` rather than a `Spacer`, deliberately. A
+  /// `SingleChildScrollView` hands its child an unbounded height, and a flex
+  /// child under an unbounded height is a hard `RenderFlex` crash. The usual
+  /// escape is `IntrinsicHeight`, but `ShineButton` contains a `LayoutBuilder`
+  /// and a `LayoutBuilder` cannot report intrinsics. `spaceBetween` needs no
+  /// flex child: `RenderFlex` applies the `ConstrainedBox`'s minimum first and
+  /// then distributes whatever is left over, which is the same layout.
+  Widget _buildContent(bool isExpanded) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = isExpanded
+            ? math.min(constraints.maxWidth, SpecLayout.maxContentWidth)
+            : constraints.maxWidth;
+        return SingleChildScrollView(
+          child: Center(
+            child: SizedBox(
+              width: width,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [_buildHeader(), _buildMessageBlock(isExpanded)],
+                ),
+              ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -245,41 +299,52 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
-  List<Widget> _buildChips() {
+  /// The six floating chips, placed as fractions of the reference viewport.
+  ///
+  /// On expanded the two inner chips (`M10 × 1.5` and `32GB`, indices 4 and 5)
+  /// are suppressed rather than respread: they sit at x = 120 and 96, which on
+  /// a tablet lands them underneath the centred content column. Widening their
+  /// spread would push them into the outer pair instead.
+  List<Widget> _buildChips(Size size, bool isExpanded) {
+    double x(double value) => size.width * (value / _designWidth);
+    double y(double value) => size.height * (value / _designHeight);
+
     return [
       Positioned(
-        left: 26,
-        top: 132,
+        left: x(26),
+        top: y(132),
         child: _float(0, const SpecChip.glass('B22', cut: ChipCut.bottomLeft)),
       ),
       Positioned(
-        right: 22,
-        top: 196,
+        right: x(22),
+        top: y(196),
         child: _float(
           1,
           const SpecChip.glass('205/55 R16', cut: ChipCut.bottomRight),
         ),
       ),
       Positioned(
-        left: 38,
-        top: 296,
+        left: x(38),
+        top: y(296),
         child: _float(2, const SpecChip.lime('67XL', cut: ChipCut.topRight)),
       ),
       Positioned(
-        right: 44,
-        top: 322,
+        right: x(44),
+        top: y(322),
         child: _float(3, const SpecChip.glass('LT1000P', cut: ChipCut.topLeft)),
       ),
-      Positioned(
-        left: 120,
-        top: 236,
-        child: _float(4, const SpecChip.faint('M10 × 1.5')),
-      ),
-      Positioned(
-        left: 96,
-        top: 386,
-        child: _float(5, const SpecChip.faint('32GB')),
-      ),
+      if (!isExpanded) ...[
+        Positioned(
+          left: x(120),
+          top: y(236),
+          child: _float(4, const SpecChip.faint('M10 × 1.5')),
+        ),
+        Positioned(
+          left: x(96),
+          top: y(386),
+          child: _float(5, const SpecChip.faint('32GB')),
+        ),
+      ],
     ];
   }
 
@@ -329,9 +394,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
-  Widget _buildMessageBlock() {
+  Widget _buildMessageBlock(bool isExpanded) {
     return Padding(
-      padding: _messagePadding,
+      padding: EdgeInsets.only(
+        bottom: SpecLayout.bottomInset(context, design: _messageBottom),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -342,7 +409,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             _copy,
             _enterRiseMid,
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: _headlineMaxWidth),
+              constraints: BoxConstraints(
+                maxWidth: isExpanded
+                    ? SpecLayout.maxContentWidth
+                    : _headlineMaxWidth,
+              ),
               child: const Text(
                 'Your physical world, remembered.',
                 style: SpecText.headline,
@@ -356,6 +427,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             const Text(
               'NO ACCOUNT · NO CLOUD\nNOTHING LEAVES THIS PHONE',
               style: SpecText.privacy,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(height: _messageGap + _buttonGap),
@@ -377,14 +450,25 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 
   /// The trademark hangs from the cap top rather than sitting on the baseline.
+  ///
+  /// [BoxFit.scaleDown] only ever shrinks, so the 86pt token is untouched at
+  /// the reference canvas and a narrow phone or a raised text scale shrinks
+  /// the wordmark instead of clipping it.
   Widget _buildWordmark() {
-    return const Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('SPEC', style: SpecText.welcomeWordmark),
-        Text('™', style: SpecText.welcomeTrademark),
-      ],
+    return const Align(
+      alignment: Alignment.centerLeft,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('SPEC', style: SpecText.welcomeWordmark),
+            Text('™', style: SpecText.welcomeTrademark),
+          ],
+        ),
+      ),
     );
   }
 
