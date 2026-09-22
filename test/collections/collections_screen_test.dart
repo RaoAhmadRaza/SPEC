@@ -8,9 +8,12 @@ import 'package:spec/collections/collections_models.dart';
 import 'package:spec/collections/collections_screen.dart';
 import 'package:spec/collections/square_caret_field.dart';
 import 'package:spec/collections/zone_row.dart';
+import 'package:spec/data/zone_repository.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 import '../support/fonts.dart';
+import '../support/responsive.dart';
 
 const _canvas = Size(402, 874);
 
@@ -105,8 +108,221 @@ Future<ValueNotifier<Widget>> _pump(
 Text _text(WidgetTester tester, String data) =>
     tester.widget<Text>(find.text(data));
 
+/// One zone whose name is exactly at the input cap, which is the longest a
+/// row ever has to render.
+final _maxNameZone = CollectionZone(
+  id: 1,
+  name: 'Z' * kZoneNameMaxLength,
+  count: 4,
+  specs: const ['B22'],
+);
+
+/// The same frame [_pump] builds — an Overlay for the reorderable list and
+/// the localizations it labels rows with — on an arbitrary canvas.
+Future<void> _pumpResponsiveCollections(
+  WidgetTester tester,
+  Widget screen, {
+  required Size canvas,
+  EdgeInsets padding = EdgeInsets.zero,
+  EdgeInsets viewInsets = EdgeInsets.zero,
+  double textScale = 1.0,
+}) async {
+  await pumpResponsive(
+    tester,
+    Localizations(
+      locale: const Locale('en'),
+      delegates: const [DefaultWidgetsLocalizations.delegate],
+      child: Overlay(initialEntries: [OverlayEntry(builder: (_) => screen)]),
+    ),
+    canvas: canvas,
+    padding: padding,
+    viewInsets: viewInsets,
+    textScale: textScale,
+  );
+  await tester.pumpAndSettle();
+}
+
+Rect _chipRect(WidgetTester tester, String label) =>
+    tester.getRect(find.text(label));
+
+/// The chip row is the last sliver, so on a short canvas it is not built
+/// until the list has been scrolled to its end.
+Future<void> _scrollToEnd(WidgetTester tester) async {
+  final position = tester
+      .state<ScrollableState>(find.byType(Scrollable).first)
+      .position;
+  position.jumpTo(position.maxScrollExtent);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUpAll(loadSpecFonts);
+
+  group('responsive', () {
+    testWidgets('title row does not overflow at text scale 1.5', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveCollections(
+        tester,
+        const CollectionsScreen(zones: _designZones, objects: 41, photos: 96),
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Assert
+      expect(find.text('MY\nSTUFF'), findsOneWidget);
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('chip row lays out identically to the reference at 402x874', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveCollections(
+        tester,
+        const CollectionsScreen(zones: _designZones, objects: 41, photos: 96),
+        canvas: specReferenceCanvas,
+      );
+
+      // Assert: same line, 8pt apart, starting at the 18pt gutter — what the
+      // Row produced before the Wrap.
+      await _scrollToEnd(tester);
+      final newZone = _chipRect(tester, '+ NEW ZONE');
+      final export = _chipRect(tester, 'EXPORT');
+      expect(newZone.top, export.top, reason: 'one line');
+      // 8pt of Wrap spacing, plus each chip's 13pt inner padding and 1pt
+      // border — exactly what the SizedBox(width: 8) inside the Row gave.
+      expect(export.left - newZone.right, closeTo(8 + 2 * (13 + 1), 0.01));
+    });
+
+    testWidgets('chips still fit one line at text scale 1.5 on a tiny '
+        'screen', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveCollections(
+        tester,
+        const CollectionsScreen(zones: _designZones, objects: 41, photos: 96),
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Assert: 212pt of the 284pt line, so the Wrap has nothing to do yet.
+      await _scrollToEnd(tester);
+      expect(
+        _chipRect(tester, 'EXPORT').top,
+        _chipRect(tester, '+ NEW ZONE').top,
+      );
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('chips wrap to a second line past the scale ceiling on a '
+        'tiny screen', (tester) async {
+      // Arrange / Act: 2.0 is past what the app clamps to, which is the case
+      // the Wrap exists for. A Row would have overflowed here.
+      await _pumpResponsiveCollections(
+        tester,
+        const CollectionsScreen(zones: _designZones, objects: 41, photos: 96),
+        canvas: specCanvases['tiny']!,
+        textScale: 2.0,
+      );
+
+      // Assert
+      await _scrollToEnd(tester);
+      expect(
+        _chipRect(tester, 'EXPORT').top,
+        greaterThanOrEqualTo(_chipRect(tester, '+ NEW ZONE').bottom),
+      );
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('a maximum-length zone name never paints over the row '
+        'controls', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveCollections(
+        tester,
+        CollectionsScreen(zones: [_maxNameZone], objects: 41, photos: 96),
+        canvas: specCanvases['tiny']!,
+      );
+
+      // Assert: Hero-ready state, which used to paint with visible overflow.
+      expect(
+        _chipRect(tester, _maxNameZone.name).overlaps(_chipRect(tester, '04')),
+        isFalse,
+        reason: 'hero-ready',
+      );
+
+      // Act: edit mode swaps in the resting label.
+      await tester.tap(find.text('EDIT'));
+      await tester.pumpAndSettle();
+
+      // Assert
+      expect(
+        _chipRect(tester, _maxNameZone.name).overlaps(_chipRect(tester, '04')),
+        isFalse,
+        reason: 'resting',
+      );
+    });
+
+    testWidgets('keyboard shrinks the scroll region', (tester) async {
+      // Arrange
+      await _pumpResponsiveCollections(
+        tester,
+        const CollectionsScreen(zones: _designZones, objects: 41, photos: 96),
+        canvas: specReferenceCanvas,
+      );
+      final open = tester.getRect(find.byType(Scrollable).first).height;
+
+      // Act
+      await _pumpResponsiveCollections(
+        tester,
+        const CollectionsScreen(zones: _designZones, objects: 41, photos: 96),
+        canvas: specReferenceCanvas,
+        viewInsets: const EdgeInsets.only(bottom: 300),
+      );
+
+      // Assert: the viewport shrank rather than padding around the keyboard.
+      expect(
+        open - tester.getRect(find.byType(Scrollable).first).height,
+        300.0,
+      );
+    });
+
+    testWidgets('content is capped and centred on a landscape tablet', (
+      tester,
+    ) async {
+      // Arrange
+      final canvas = specCanvases['tabletLandscape']!;
+
+      // Act
+      await _pumpResponsiveCollections(
+        tester,
+        const CollectionsScreen(zones: _designZones, objects: 41, photos: 96),
+        canvas: canvas,
+      );
+
+      // Assert
+      final row = tester.getRect(find.byType(ZoneRow).first);
+      expect(row.width, lessThanOrEqualTo(SpecLayout.maxContentWidth));
+      expect(row.center.dx, closeTo(canvas.width / 2, 0.5));
+    });
+
+    testWidgets('content clears a 34pt home indicator and a 59pt Dynamic '
+        'Island', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveCollections(
+        tester,
+        const CollectionsScreen(zones: _designZones, objects: 41, photos: 96),
+        canvas: specReferenceCanvas,
+        padding: const EdgeInsets.only(top: 59, bottom: 34),
+      );
+
+      // Assert
+      expect(
+        tester.getRect(find.byType(CollectionsHeaderRow)).top,
+        greaterThanOrEqualTo(59.0),
+      );
+    });
+  });
 
   group('populated', () {
     testWidgets('lays out five rows with padded counts and live samples', (
