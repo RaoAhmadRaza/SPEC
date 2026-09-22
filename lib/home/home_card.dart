@@ -9,6 +9,10 @@ import 'package:spec/home/home_tokens.dart';
 import 'package:spec/object/object_tags.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
+/// The designed tile height, now a floor rather than a fixed size: at a
+/// raised text scale the content column needs more room, and a rigid box
+/// would clip it. The grid rows are `IntrinsicHeight` so both tiles in a row
+/// still share whichever height the taller one needs.
 const double kCardHeight = 170;
 
 /// Three corners at 20 and one cut to 6. The cut rotates in reading order,
@@ -134,8 +138,13 @@ class ObjectCard extends StatelessWidget {
               children: [
                 Hero(
                   tag: objectSpecTag(object.id),
+                  // Two lines, because a tall spec is already two by design
+                  // ('205/55\nR16'). Truncating to one would change what this
+                  // Hero's flight into the Object screen interpolates.
                   child: Text(
                     object.specText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: object.isSpecTall
                         ? HomeText.cardSpecTall
                         : HomeText.cardSpec,
@@ -237,33 +246,37 @@ class _CardShell extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: kCardHeight,
-        decoration: BoxDecoration(
-          // A missing photo is a flat tile: no icon, no label.
-          color: SpecColors.tile,
-          borderRadius: radius,
-          border: Border.all(color: HomeColors.cardBorder),
-        ),
-        child: ClipRRect(
-          borderRadius: radius,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (photo case final ImageProvider image)
-                _maybeHero(
-                  photoHeroTag,
-                  Image(
-                    image: image,
-                    fit: BoxFit.cover,
-                    excludeFromSemantics: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: kCardHeight),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            // A missing photo is a flat tile: no icon, no label.
+            color: SpecColors.tile,
+            borderRadius: radius,
+            border: Border.all(color: HomeColors.cardBorder),
+          ),
+          child: ClipRRect(
+            borderRadius: radius,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (photo case final ImageProvider image)
+                  _maybeHero(
+                    photoHeroTag,
+                    Image(
+                      image: image,
+                      fit: BoxFit.cover,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
+                IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(gradient: scrim),
                   ),
                 ),
-              IgnorePointer(
-                child: DecoratedBox(decoration: BoxDecoration(gradient: scrim)),
-              ),
-              child,
-            ],
+                child,
+              ],
+            ),
           ),
         ),
       ),
