@@ -8,7 +8,7 @@ part of 'app_info.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// `SPEC 1.0.0 (1)`: the version and build the footer of Settings shows.
+/// `SPEC 1.0.1 (2)`: the version and build the footer of Settings shows.
 ///
 /// Read from the bundle rather than a constant so it can never drift from the
 /// build the user is actually running. Kept alive: it cannot change while the
@@ -17,7 +17,7 @@ part of 'app_info.dart';
 @ProviderFor(appVersion)
 final appVersionProvider = AppVersionProvider._();
 
-/// `SPEC 1.0.0 (1)`: the version and build the footer of Settings shows.
+/// `SPEC 1.0.1 (2)`: the version and build the footer of Settings shows.
 ///
 /// Read from the bundle rather than a constant so it can never drift from the
 /// build the user is actually running. Kept alive: it cannot change while the
@@ -26,7 +26,7 @@ final appVersionProvider = AppVersionProvider._();
 final class AppVersionProvider
     extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
     with $FutureModifier<String>, $FutureProvider<String> {
-  /// `SPEC 1.0.0 (1)`: the version and build the footer of Settings shows.
+  /// `SPEC 1.0.1 (2)`: the version and build the footer of Settings shows.
   ///
   /// Read from the bundle rather than a constant so it can never drift from the
   /// build the user is actually running. Kept alive: it cannot change while the
