@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker_android/image_picker_android.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
-
 import 'package:spec/app/router.dart';
 import 'package:spec/app/splash_gate.dart';
 import 'package:spec/providers/reminders.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 void main() {
@@ -43,13 +43,26 @@ class SpecApp extends ConsumerWidget {
       // Material, so without it any text a screen does not wrap itself — the
       // tab bar, Collections, a Hero mid-flight — falls back to Flutter's
       // debug style: yellow, double-underlined.
-      builder: (context, child) => DefaultTextStyle(
-        style: const TextStyle(
-          fontFamily: SpecFonts.display,
-          color: SpecColors.ink,
-          decoration: TextDecoration.none,
+      //
+      // The text scale is capped rather than followed all the way up.
+      // `SpecText` bakes letterSpacing in absolute points — the wordmark
+      // tracks -4.6 — and tracking does not grow with the glyphs, so past
+      // roughly 1.5 the display faces collide into themselves no matter how
+      // much room the layout gives them. 1.5 is the honest ceiling for this
+      // type system; screens are built to survive it.
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: MediaQuery.textScalerOf(context)
+              .clamp(maxScaleFactor: SpecLayout.maxTextScale),
         ),
-        child: SplashGate(child: child!),
+        child: DefaultTextStyle(
+          style: const TextStyle(
+            fontFamily: SpecFonts.display,
+            color: SpecColors.ink,
+            decoration: TextDecoration.none,
+          ),
+          child: SplashGate(child: child!),
+        ),
       ),
     );
   }
