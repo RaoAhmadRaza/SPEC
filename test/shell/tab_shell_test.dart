@@ -5,8 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:spec/home/home_tab_bar.dart';
 import 'package:spec/home/home_tokens.dart';
 import 'package:spec/shell/tab_shell.dart';
+import 'package:spec/theme/spec_layout.dart';
 
 import '../support/fonts.dart';
+import '../support/responsive.dart';
 
 const _canvas = Size(402, 874);
 
@@ -49,8 +51,114 @@ Future<List<(SpecTab, bool)>> _pump(
 Text _label(WidgetTester tester, String label) =>
     tester.widget<Text>(find.text(label));
 
+Future<void> _pumpResponsiveShell(
+  WidgetTester tester, {
+  required Size canvas,
+  EdgeInsets padding = EdgeInsets.zero,
+  double textScale = 1.0,
+}) async {
+  await pumpResponsive(
+    tester,
+    SpecTabShell(
+      builder: (context, tab, isActive) =>
+          Center(child: Text('root:${tab.name}')),
+    ),
+    canvas: canvas,
+    padding: padding,
+    textScale: textScale,
+  );
+  await _pumpFrames(tester, 5);
+}
+
+Rect _barRect(WidgetTester tester) => tester.getRect(find.byType(HomeTabBar));
+
 void main() {
   setUpAll(loadSpecFonts);
+
+  testWidgets('chrome height is 112 at zero padding', (tester) async {
+    // Arrange / Act
+    await _pumpResponsiveShell(tester, canvas: specReferenceCanvas);
+
+    // Assert: the literal Home and Collections used to carry.
+    expect(
+      specShellChromeHeight(tester.element(find.byType(HomeTabBar))),
+      112.0,
+    );
+  });
+
+  testWidgets('tab bar clears a 34pt home indicator', (tester) async {
+    // Arrange / Act
+    await _pumpResponsiveShell(
+      tester,
+      canvas: specReferenceCanvas,
+      padding: const EdgeInsets.only(bottom: 34),
+    );
+
+    // Assert
+    expect(
+      specReferenceCanvas.height - _barRect(tester).bottom,
+      greaterThanOrEqualTo(34.0),
+    );
+  });
+
+  testWidgets('orb clears a 34pt home indicator', (tester) async {
+    // Arrange / Act
+    await _pumpResponsiveShell(
+      tester,
+      canvas: specReferenceCanvas,
+      padding: const EdgeInsets.only(bottom: 34),
+    );
+
+    // Assert
+    expect(
+      specReferenceCanvas.height - tester.getRect(find.byType(HomeOrb)).bottom,
+      greaterThanOrEqualTo(34.0),
+    );
+  });
+
+  testWidgets('tab bar spans the full inset width on a phone', (tester) async {
+    // Arrange / Act
+    await _pumpResponsiveShell(tester, canvas: specReferenceCanvas);
+
+    // Assert: the cap is a no-op below the expanded breakpoint.
+    expect(
+      _barRect(tester).width,
+      specReferenceCanvas.width - 2 * kTabBarInset,
+    );
+  });
+
+  testWidgets('tab bar is capped and centred on a landscape tablet', (
+    tester,
+  ) async {
+    // Arrange
+    final canvas = specCanvases['tabletLandscape']!;
+
+    // Act
+    await _pumpResponsiveShell(tester, canvas: canvas);
+
+    // Assert
+    final bar = _barRect(tester);
+    expect(bar.width, lessThanOrEqualTo(SpecLayout.maxContentWidth));
+    expect(bar.center.dx, closeTo(canvas.width / 2, 0.5));
+  });
+
+  testWidgets('tab labels do not clip at text scale 1.5', (tester) async {
+    // Arrange / Act
+    await _pumpResponsiveShell(
+      tester,
+      canvas: specCanvases['tiny']!,
+      textScale: 1.5,
+    );
+
+    // Assert
+    final bar = _barRect(tester);
+    for (final label in ['Home', 'Collections']) {
+      final rect = tester.getRect(find.text(label));
+      expect(bar.contains(rect.topLeft), isTrue, reason: label);
+      expect(bar.contains(rect.bottomRight), isTrue, reason: label);
+    }
+    expectNoOverflow(tester);
+  });
 
   testWidgets('switching tabs keeps one bar and one orb with the same state', (
     tester,
