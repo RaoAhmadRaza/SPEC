@@ -2,10 +2,15 @@ import 'dart:ui';
 
 import 'package:flutter/widgets.dart';
 
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 const _cardPadding = EdgeInsets.all(18);
 const _cardBlurSigma = 13.0;
+
+/// The leading square's designed size. It grows with the text scale so it
+/// stays in proportion to the title beside it, but no further than the app's
+/// own scale ceiling, past which it would dominate the card.
 const _leadingSize = 64.0;
 const _leadingRadius = 18.0;
 const _rowGap = 14.0;
@@ -72,13 +77,20 @@ class StepCard extends StatelessWidget {
                   children: [
                     Text(label, style: SpecText.stepLabel),
                     const SizedBox(height: _textGap),
-                    Text(title, style: SpecText.cardTitle),
+                    Text(
+                      title,
+                      style: SpecText.cardTitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: _textGap),
                     Text(
                       body,
                       style: isLime
                           ? SpecText.cardBodyBright
                           : SpecText.cardBody,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -99,9 +111,12 @@ class _LeadingSquare extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.textScalerOf(context)
+        .scale(_leadingSize)
+        .clamp(_leadingSize, _leadingSize * SpecLayout.maxTextScale);
     return Container(
-      width: _leadingSize,
-      height: _leadingSize,
+      width: size,
+      height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: isLime ? SpecColors.limeLeadingFill : SpecColors.leadingFill,
