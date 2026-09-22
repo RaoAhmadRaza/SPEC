@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:spec/home/home_glass.dart';
 import 'package:spec/home/home_icons.dart';
 import 'package:spec/home/home_tokens.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 const double kTabBarHeight = 64;
@@ -11,6 +12,21 @@ const double kTabBarInset = 16;
 const double kTabBarBottom = 24;
 const double kOrbSize = 66;
 const double kOrbBottom = 32;
+
+/// Air between a scrolling tab's last item and the top of the floating bar.
+const double kShellChromeGap = 24;
+
+/// What a scrolling tab must pad at the bottom so its last item clears the
+/// floating bar and orb. Home and Collections both read this; changing the
+/// bar's size must not require editing two other files.
+///
+/// At zero padding this is 24 + 64 + 24 = 112, the number both screens used
+/// to carry as a literal. The orb's own top sits at 32 + 66 = 98, so the bar
+/// is what sets the total.
+double specShellChromeHeight(BuildContext context) =>
+    SpecLayout.bottomInset(context, design: kTabBarBottom) +
+    kTabBarHeight +
+    kShellChromeGap;
 
 const _barBlur = 30.0;
 const _orbBlur = 24.0;
@@ -40,8 +56,11 @@ class HomeTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: kTabBarHeight,
+    return ConstrainedBox(
+      // A floor, not a fixed height: at a raised text scale the labels need
+      // more room, and the glass pill's own ClipRRect would cut them off
+      // without reporting an overflow.
+      constraints: const BoxConstraints(minHeight: kTabBarHeight),
       child: GlassSurface(
         borderRadius: BorderRadius.circular(999),
         blur: _barBlur,
@@ -60,30 +79,37 @@ class HomeTabBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _Tab(
-              label: 'Home',
-              isActive: active == SpecTab.home,
-              idleIcon: const HomeIcon.house(size: 19, color: SpecColors.ink72),
-              activeIcon: const HomeIcon.house(
-                size: 19,
-                color: SpecColors.ink,
-                isFilled: true,
+            Flexible(
+              child: _Tab(
+                label: 'Home',
+                isActive: active == SpecTab.home,
+                idleIcon: const HomeIcon.house(
+                  size: 19,
+                  color: SpecColors.ink72,
+                ),
+                activeIcon: const HomeIcon.house(
+                  size: 19,
+                  color: SpecColors.ink,
+                  isFilled: true,
+                ),
+                onTap: onHome,
               ),
-              onTap: onHome,
             ),
-            _Tab(
-              label: 'Collections',
-              isActive: active == SpecTab.collections,
-              idleIcon: const HomeIcon.folder(
-                size: 19,
-                color: SpecColors.ink72,
+            Flexible(
+              child: _Tab(
+                label: 'Collections',
+                isActive: active == SpecTab.collections,
+                idleIcon: const HomeIcon.folder(
+                  size: 19,
+                  color: SpecColors.ink72,
+                ),
+                activeIcon: const HomeIcon.folder(
+                  size: 19,
+                  color: SpecColors.ink,
+                  isFilled: true,
+                ),
+                onTap: onCollections,
               ),
-              activeIcon: const HomeIcon.folder(
-                size: 19,
-                color: SpecColors.ink,
-                isFilled: true,
-              ),
-              onTap: onCollections,
             ),
           ],
         ),
@@ -112,8 +138,8 @@ class _Tab extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        height: kTabBarHeight,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: kTabBarHeight),
         child: TweenAnimationBuilder<double>(
           tween: Tween(end: isActive ? 1 : 0),
           duration: _activeFade,
@@ -127,9 +153,17 @@ class _Tab extends StatelessWidget {
                 ],
               ),
               const SizedBox(width: 10),
-              Text(
-                label,
-                style: TextStyle.lerp(HomeText.tabIdle, HomeText.tabActive, t),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle.lerp(
+                    HomeText.tabIdle,
+                    HomeText.tabActive,
+                    t,
+                  ),
+                ),
               ),
             ],
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:spec/home/home_tab_bar.dart';
+import 'package:spec/theme/spec_layout.dart';
 
 const _switchDuration = Duration(milliseconds: 360);
 const _reducedSwitchDuration = Duration(milliseconds: 200);
@@ -122,19 +123,31 @@ class _SpecTabShellState extends State<SpecTabShell>
         Positioned(
           left: kTabBarInset,
           right: kTabBarInset,
-          bottom: kTabBarBottom,
+          bottom: SpecLayout.bottomInset(context, design: kTabBarBottom),
           child: _pushFade(
-            HomeTabBar(
-              active: _tab,
-              onHome: () => _select(SpecTab.home),
-              onCollections: () => _select(SpecTab.collections),
+            Center(
+              // On a phone the cap is infinite, so the pill still fills the
+              // inset width exactly as before. On a tablet it stops being a
+              // stretched strip with a void between two tabs.
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: SpecLayout.isExpanded(context)
+                      ? SpecLayout.maxContentWidth
+                      : double.infinity,
+                ),
+                child: HomeTabBar(
+                  active: _tab,
+                  onHome: () => _select(SpecTab.home),
+                  onCollections: () => _select(SpecTab.collections),
+                ),
+              ),
             ),
           ),
         ),
         Positioned(
           left: 0,
           right: 0,
-          bottom: kOrbBottom,
+          bottom: SpecLayout.bottomInset(context, design: kOrbBottom),
           child: _pushFade(
             Center(
               child: HomeOrb(breathe: _orbScale, onTap: widget.onAdd ?? () {}),
