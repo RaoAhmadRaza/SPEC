@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -5,12 +7,25 @@ import 'package:spec/home/home_card.dart';
 import 'package:spec/home/home_empty.dart';
 import 'package:spec/home/home_header.dart';
 import 'package:spec/home/home_models.dart';
+import 'package:spec/home/home_tab_bar.dart';
 import 'package:spec/home/home_tokens.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
-/// 56 top for the status bar, 18 either side, and 112 at the bottom so the
-/// last tile can scroll clear of the shell's floating bar and orb.
-const _pagePadding = EdgeInsets.fromLTRB(18, 56, 18, 112);
+/// 56 top for the status bar and 18 either side.
+const _pageSide = 18.0;
+const _pageTop = 56.0;
+
+/// Past this width the grid gets more columns, but a line of prose does not
+/// get more readable. The whole column is centred at one cap rather than the
+/// header blocks being capped individually: it is a single wrapper, and the
+/// grid is the only thing here that actually wants the extra width.
+const _maxPageWidth = 900.0;
+
+/// The tile width the two-column design produces at the reference canvas:
+/// `(402 - 18 - 18 - 9) / 2`. The column count is derived from it, so 402
+/// still yields exactly two.
+const _referenceTileWidth = 178.5;
 
 /// The design's column gap, plus the per-block margins it sets on top.
 const _gapHeaderToWordmark = 15.0;
@@ -256,10 +271,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           SingleChildScrollView(
             controller: _scroll,
-            padding: _pagePadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: _buildBlocks(),
+            padding: EdgeInsets.fromLTRB(
+              _pageSide,
+              SpecLayout.topInset(context, design: _pageTop),
+              _pageSide,
+              // The shell owns this number, so moving the bar cannot leave
+              // the last tile stranded under it.
+              specShellChromeHeight(context),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) => Center(
+                child: SizedBox(
+                  width: math.min(constraints.maxWidth, _maxPageWidth),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: _buildBlocks(),
+                  ),
+                ),
+              ),
             ),
           ),
           // The only thing the scroll position changes.
@@ -362,24 +391,44 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _tile(recent.length, AddCard(onTap: widget.onAdd ?? () {})),
     ];
 
-    return Column(
-      children: [
-        for (var row = 0; row * 2 < tiles.length; row++) ...[
-          if (row > 0) const SizedBox(height: _gridGap),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: tiles[row * 2]),
-              const SizedBox(width: _gridGap),
-              Expanded(
-                child: row * 2 + 1 < tiles.length
-                    ? tiles[row * 2 + 1]
-                    : const SizedBox(height: kCardHeight),
+    // The manual Row loop stays rather than adopting `KeyedReflow`: that
+    // engine positions cells at a fixed `cellHeight`, which is exactly the
+    // rigid height this screen is moving away from.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = SpecLayout.columnsFor(
+          constraints.maxWidth,
+          idealCell: _referenceTileWidth,
+          min: 2,
+          max: 4,
+        );
+        final rows = (tiles.length / columns).ceil();
+        return Column(
+          children: [
+            for (var row = 0; row < rows; row++) ...[
+              if (row > 0) const SizedBox(height: _gridGap),
+              // One extra layout pass per row, which at four tiles is
+              // nothing. It is what lets a card grow past `kCardHeight` and
+              // still leave its neighbour the same height.
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var column = 0; column < columns; column++) ...[
+                      if (column > 0) const SizedBox(width: _gridGap),
+                      Expanded(
+                        child: row * columns + column < tiles.length
+                            ? tiles[row * columns + column]
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
-          ),
-        ],
-      ],
+          ],
+        );
+      },
     );
   }
 
