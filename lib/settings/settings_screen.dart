@@ -1,9 +1,13 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import 'package:spec/collections/collections_tokens.dart';
 import 'package:spec/object/object_parts.dart';
 import 'package:spec/settings/settings_parts.dart';
 import 'package:spec/settings/settings_tokens.dart';
+
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 /// Collections' page geometry, so the two data screens share a margin.
@@ -53,7 +57,7 @@ class SettingsScreen extends StatefulWidget {
     required this.onDeleteEverything,
   });
 
-  /// `SPEC 1.0.0 (1)`.
+  /// `SPEC 1.0.1 (2)`.
   final String version;
 
   /// `41 OBJECTS · 96 PHOTOS`.
@@ -137,41 +141,68 @@ class _SettingsScreenState extends State<SettingsScreen>
         child: CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(_side, _top, _side, _bottom),
+              // The bottom inset is not here: `SliverFillRemaining` fills the
+              // remaining *paint* extent, which `SliverPadding` reduces by its
+              // leading padding only. A trailing padding here is counted in
+              // the scroll extent but the child still paints to the viewport's
+              // bottom edge, which put the version line under the home
+              // indicator. It goes inside the sliver instead.
+              padding: EdgeInsets.fromLTRB(
+                _side,
+                SpecLayout.topInset(context, design: _top),
+                _side,
+                0,
+              ),
+              // No LayoutBuilder in here: this sliver measures its child's
+              // intrinsic height, and a LayoutBuilder cannot report one.
               sliver: SliverFillRemaining(
                 hasScrollBody: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _rise(0, 0.3, GlassCircle.back(onTap: widget.onBack)),
-                    const SizedBox(height: _blockGap),
-                    _rise(0.06, 0.5, _buildTitle(), dy: 20),
-                    const SizedBox(height: _blockGap),
-                    _rise(
-                      0.2,
-                      0.52,
-                      const SettingsRule(color: CollectionsColors.ruleStrong),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: SpecLayout.bottomInset(context, design: _bottom),
+                  ),
+                  child: Center(
+                    child: SizedBox(
+                      width: _contentWidth(context),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _rise(0, 0.3, GlassCircle.back(onTap: widget.onBack)),
+                          const SizedBox(height: _blockGap),
+                          _rise(0.06, 0.5, _buildTitle(), dy: 20),
+                          const SizedBox(height: _blockGap),
+                          _rise(
+                            0.2,
+                            0.52,
+                            const SettingsRule(
+                              color: CollectionsColors.ruleStrong,
+                            ),
+                          ),
+                          const SizedBox(height: _blockGap),
+                          _rise(0.26, 0.64, _buildPrivacy(), dy: 12),
+                          const SizedBox(height: _blockGap),
+                          _rise(
+                            0.34,
+                            0.66,
+                            const SettingsRule(
+                              color: CollectionsColors.hairline,
+                            ),
+                          ),
+                          const SizedBox(height: _blockGap),
+                          _rise(0.4, 0.8, _buildActions(), dy: 12),
+                          const SizedBox(height: _blockGap),
+                          _buildStatus(),
+                          const Spacer(),
+                          const SizedBox(height: _blockGap),
+                          _rise(
+                            0.5,
+                            1,
+                            Text(widget.version, style: SettingsText.version),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: _blockGap),
-                    _rise(0.26, 0.64, _buildPrivacy(), dy: 12),
-                    const SizedBox(height: _blockGap),
-                    _rise(
-                      0.34,
-                      0.66,
-                      const SettingsRule(color: CollectionsColors.hairline),
-                    ),
-                    const SizedBox(height: _blockGap),
-                    _rise(0.4, 0.8, _buildActions(), dy: 12),
-                    const SizedBox(height: _blockGap),
-                    _buildStatus(),
-                    const Spacer(),
-                    const SizedBox(height: _blockGap),
-                    _rise(
-                      0.5,
-                      1,
-                      Text(widget.version, style: SettingsText.version),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -181,13 +212,25 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  /// The column's width, capped so a 54pt title and a privacy paragraph do
+  /// not run the full width of an iPad.
+  double _contentWidth(BuildContext context) => math.min(
+    MediaQuery.sizeOf(context).width - _side * 2,
+    SpecLayout.maxContentWidth,
+  );
+
   Widget _buildTitle() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('SETTINGS', style: SettingsText.title, maxLines: 1),
         const SizedBox(height: _titleGap),
-        Text(widget.counts, style: SettingsText.counts),
+        Text(
+          widget.counts,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: SettingsText.counts,
+        ),
       ],
     );
   }
@@ -202,6 +245,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         const Text(
           'Everything you save lives only in SPEC on this phone. A backup is '
           'a file you keep.',
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
           style: SettingsText.body,
         ),
       ],
@@ -249,7 +294,14 @@ class _SettingsScreenState extends State<SettingsScreen>
         constraints: const BoxConstraints(minHeight: _statusMinHeight),
         child: status == null
             ? const SizedBox(width: double.infinity)
-            : Text(status, style: SettingsText.status),
+            // Two lines, not one: this is a live region, so truncating it
+            // loses the only answer an action gives.
+            : Text(
+                status,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: SettingsText.status,
+              ),
       ),
     );
   }

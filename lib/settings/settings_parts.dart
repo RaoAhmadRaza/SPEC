@@ -56,7 +56,12 @@ class SettingsChip extends StatelessWidget {
           ),
           child: Padding(
             padding: _chipPadding,
-            child: Text(label, style: style),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
           ),
         ),
       ),

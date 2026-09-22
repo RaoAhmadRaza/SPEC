@@ -18,7 +18,11 @@ class TapTarget extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: _minHitBox),
-        child: Center(heightFactor: 1, child: child),
+        // `widthFactor` alongside `heightFactor`: without it the Center
+        // expands to the full width of whatever slot it is given and centres
+        // the child inside, so a left-aligned column's targets were not
+        // actually left-aligned.
+        child: Center(widthFactor: 1, heightFactor: 1, child: child),
       ),
     );
   }

@@ -39,6 +39,6 @@ abstract final class SettingsText {
   /// the one line on the page that just changed.
   static final status = SpecText.privacy.copyWith(color: SpecColors.ink90);
 
-  /// `SPEC 1.0.0 (1)`.
+  /// `SPEC 1.0.1 (2)`.
   static const version = SpecText.caption;
 }
