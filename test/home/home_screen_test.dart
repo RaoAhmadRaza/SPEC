@@ -8,6 +8,7 @@ import 'package:spec/home/home_screen.dart';
 import 'package:spec/home/home_tab_bar.dart';
 
 import '../support/fonts.dart';
+import '../support/responsive.dart';
 
 /// The canvas every number in the design is measured against.
 const _canvas = Size(402, 874);
@@ -65,8 +66,197 @@ Future<void> _pump(
   }
 }
 
+/// Two objects whose specs differ enough that one card wants more height.
+const _unevenObjects = [
+  HomeObject(id: 1, zone: 'HOME', spec: 'B22', name: 'Bulb', subLines: ['LED']),
+  HomeObject(
+    id: 2,
+    zone: 'CAR',
+    spec: '205/55 R16 91V EXTRA LOAD',
+    name: 'Car Tyres',
+    subLines: ['91V · MICHELIN', 'ALL SEASON'],
+  ),
+];
+
+/// The page's own scroll view, which is the outermost of the two — the
+/// category rail is a horizontal one nested inside it.
+ScrollPosition _pageScroll(WidgetTester tester) =>
+    tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+
+/// How many tiles share the top edge of the first one, which is the grid's
+/// column count.
+int _gridColumns(WidgetTester tester) {
+  final tops = [
+    for (final card in find.byType(ObjectCard).evaluate())
+      tester.getRect(find.byWidget(card.widget)).top,
+    tester.getRect(find.byType(AddCard)).top,
+  ];
+  return tops.where((top) => (top - tops.first).abs() < 1).length;
+}
+
+Future<void> _pumpResponsiveHome(
+  WidgetTester tester,
+  Widget screen, {
+  required Size canvas,
+  EdgeInsets padding = EdgeInsets.zero,
+  double textScale = 1.0,
+}) async {
+  await pumpResponsive(
+    tester,
+    screen,
+    canvas: canvas,
+    padding: padding,
+    textScale: textScale,
+  );
+  for (var i = 0; i < 60; i++) {
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+}
+
 void main() {
   setUpAll(loadSpecFonts);
+
+  testWidgets('grid uses two columns at the reference canvas', (tester) async {
+    // Arrange / Act
+    await _pumpResponsiveHome(
+      tester,
+      const HomeScreen(objects: _designObjects),
+      canvas: specReferenceCanvas,
+    );
+
+    // Assert
+    expect(_gridColumns(tester), 2);
+  });
+
+  testWidgets('grid uses four columns on a portrait tablet', (tester) async {
+    // Arrange / Act
+    await _pumpResponsiveHome(
+      tester,
+      const HomeScreen(objects: _designObjects),
+      canvas: specCanvases['tabletPortrait']!,
+    );
+
+    // Assert
+    expect(_gridColumns(tester), 4);
+  });
+
+  testWidgets('cards grow rather than clipping at text scale 1.5', (
+    tester,
+  ) async {
+    // Arrange / Act
+    await _pumpResponsiveHome(
+      tester,
+      const HomeScreen(objects: _designObjects),
+      canvas: specCanvases['tiny']!,
+      textScale: 1.5,
+    );
+
+    // Assert
+    expect(
+      tester.getSize(find.byType(ObjectCard).first).height,
+      greaterThan(kCardHeight),
+    );
+    expectNoOverflow(tester);
+  });
+
+  testWidgets('both cards in a row share a height', (tester) async {
+    // Arrange / Act
+    await _pumpResponsiveHome(
+      tester,
+      const HomeScreen(objects: _unevenObjects),
+      canvas: specCanvases['tiny']!,
+      textScale: 1.5,
+    );
+
+    // Assert
+    final heights = [
+      for (var i = 0; i < 2; i++)
+        tester.getSize(find.byType(ObjectCard).at(i)).height,
+    ];
+    expect(heights[0], heights[1]);
+    expect(heights[0], greaterThan(kCardHeight));
+  });
+
+  testWidgets('wordmark fits the width at every canvas', (tester) async {
+    for (final MapEntry(key: name, value: canvas) in specCanvases.entries) {
+      // Arrange / Act
+      await _pumpResponsiveHome(
+        tester,
+        const HomeScreen(objects: _designObjects),
+        canvas: canvas,
+        textScale: 1.5,
+      );
+
+      // Assert
+      final wordmark = tester.getRect(
+        find
+            .descendant(
+              of: find.byType(HomeWordmark),
+              matching: find.byType(FittedBox),
+            )
+            .first,
+      );
+      expect(wordmark.left, greaterThanOrEqualTo(0.0), reason: name);
+      expect(wordmark.right, lessThanOrEqualTo(canvas.width), reason: name);
+      expectNoOverflow(tester);
+    }
+  });
+
+  testWidgets('last tile scrolls clear of the shell chrome', (tester) async {
+    for (final MapEntry(key: name, value: canvas) in specCanvases.entries) {
+      // Arrange
+      await _pumpResponsiveHome(
+        tester,
+        const HomeScreen(objects: _designObjects),
+        canvas: canvas,
+      );
+
+      // Act
+      final position = _pageScroll(tester);
+      if (position.maxScrollExtent > 0) {
+        position.jumpTo(position.maxScrollExtent);
+        await tester.pump();
+      }
+
+      // Assert
+      expect(
+        tester.getRect(find.byType(AddCard)).bottom,
+        lessThanOrEqualTo(
+          canvas.height -
+              specShellChromeHeight(tester.element(find.byType(HomeScreen))),
+        ),
+        reason: name,
+      );
+    }
+  });
+
+  testWidgets('content clears a 34pt home indicator and a 59pt Dynamic '
+      'Island', (tester) async {
+    // Arrange / Act
+    await _pumpResponsiveHome(
+      tester,
+      const HomeScreen(objects: _designObjects),
+      canvas: specReferenceCanvas,
+      padding: const EdgeInsets.only(top: 59, bottom: 34),
+    );
+
+    // Assert: the header starts below the island.
+    expect(
+      tester.getRect(find.byType(HomeHeaderRow)).top,
+      greaterThanOrEqualTo(59.0),
+    );
+
+    // And the last tile still ends above the chrome and the indicator.
+    final position = _pageScroll(tester);
+    if (position.maxScrollExtent > 0) {
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pump();
+    }
+    expect(
+      tester.getRect(find.byType(AddCard)).bottom,
+      lessThanOrEqualTo(specReferenceCanvas.height - 34),
+    );
+  });
 
   testWidgets('the populated grid is three objects and the add card', (
     tester,
