@@ -15,6 +15,7 @@ import 'package:spec/object/object_tokens.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 import '../support/fonts.dart';
+import '../support/responsive.dart';
 
 /// The canvas every number in the design is measured against.
 const _canvas = Size(402, 874);
@@ -172,8 +173,189 @@ ObjectView _bulbWithNotes(String notes) => ObjectView(
   notes: notes,
 );
 
+/// Same frame as [_pump] but on an arbitrary canvas, with real insets and a
+/// real text scale.
+Future<void> _pumpResponsiveObject(
+  WidgetTester tester, {
+  required Size canvas,
+  EdgeInsets padding = EdgeInsets.zero,
+  EdgeInsets viewInsets = EdgeInsets.zero,
+  double textScale = 1.0,
+}) async {
+  tester.view
+    ..physicalSize = canvas * 3
+    ..devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    MediaQuery(
+      data: MediaQueryData(
+        size: canvas,
+        padding: padding,
+        viewPadding: padding,
+        viewInsets: viewInsets,
+        textScaler: TextScaler.linear(textScale),
+      ),
+      child: const MaterialApp(
+        home: ObjectScreen(
+          object: _bulb,
+          sourceSpecStyle: _tileSpec,
+          sourcePhotoRadius: _tileRadius,
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// The floating action bar's box.
+Rect _actionBar(WidgetTester tester) => tester.getRect(
+  find
+      .byWidgetPredicate(
+        (w) => w is SizedBox && w.height == objectBarHeightOf(tester),
+      )
+      .first,
+);
+
+double objectBarHeightOf(WidgetTester tester) =>
+    objectBarHeight(tester.element(find.byType(ObjectScreen)));
+
 void main() {
   setUpAll(loadSpecFonts);
+
+  group('responsive', () {
+    testWidgets('action bar does not overflow at text scale 1.5', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveObject(
+        tester,
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Assert
+      expect(find.text('Edit'), findsOneWidget);
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('last content row clears the action bar at text scale 1.5', (
+      tester,
+    ) async {
+      // Arrange
+      await _pumpResponsiveObject(
+        tester,
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Act
+      final position = tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position;
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pumpAndSettle();
+
+      // Assert: the reserve and the bar read one function, so the last row
+      // always stops above it.
+      final rows = find.byType(MetaRow);
+      final last = tester.getRect(rows.at(rows.evaluate().length - 1));
+      expect(last.bottom, lessThanOrEqualTo(_actionBar(tester).top));
+    });
+
+    testWidgets('photo pair is 158pt tall at the reference canvas', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveObject(tester, canvas: specReferenceCanvas);
+
+      // Assert: the AspectRatio conversion is exact at 402pt.
+      expect(
+        tester.getSize(find.byType(PhotoPair)).height,
+        ObjectMetrics.photoRowHeight,
+      );
+    });
+
+    testWidgets('photo pair keeps its aspect ratio on a portrait tablet', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveObject(
+        tester,
+        canvas: specCanvases['tabletPortrait']!,
+      );
+
+      // Assert
+      final pair = tester.getSize(find.byType(PhotoPair));
+      expect(
+        pair.width / pair.height,
+        closeTo(ObjectMetrics.photoPairRatio, 0.01),
+      );
+    });
+
+    testWidgets('content is capped at maxContentWidth on a landscape tablet', (
+      tester,
+    ) async {
+      // Arrange
+      final canvas = specCanvases['tabletLandscape']!;
+
+      // Act
+      await _pumpResponsiveObject(tester, canvas: canvas);
+
+      // Assert
+      final pair = tester.getRect(find.byType(PhotoPair));
+      expect(pair.width, lessThanOrEqualTo(ObjectMetrics.maxContentWidth));
+      expect(pair.center.dx, closeTo(canvas.width / 2, 0.5));
+    });
+
+    testWidgets('spec text still shrinks toward the floor at text scale 1.5', (
+      tester,
+    ) async {
+      // Arrange / Act: a spec long enough to need shrinking on a tiny canvas.
+      await _pumpResponsiveObject(
+        tester,
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Assert: fitSpecStyle still runs against the capped width.
+      final spec = tester.widget<Text>(find.text('B22'));
+      final size = spec.style?.fontSize ?? ObjectText.spec.fontSize!;
+      expect(size, greaterThanOrEqualTo(ObjectMetrics.specFloor));
+      expect(size, lessThanOrEqualTo(ObjectText.spec.fontSize!));
+    });
+
+    testWidgets('header circles clear a 59pt Dynamic Island', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveObject(
+        tester,
+        canvas: specReferenceCanvas,
+        padding: const EdgeInsets.only(top: 59),
+      );
+
+      // Assert
+      expect(
+        tester.getRect(find.byType(GlassCircle).first).top,
+        greaterThanOrEqualTo(59.0),
+      );
+    });
+
+    testWidgets('inline edit field clears the action bar when the keyboard '
+        'is up', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveObject(
+        tester,
+        canvas: specReferenceCanvas,
+        viewInsets: const EdgeInsets.only(bottom: 300),
+      );
+
+      // Assert: the bar rides above the keyboard rather than under it.
+      expect(
+        _actionBar(tester).bottom,
+        lessThanOrEqualTo(specReferenceCanvas.height - 300),
+      );
+    });
+  });
 
   group('layout', () {
     testWidgets('lands on the design with no overflow', (tester) async {
