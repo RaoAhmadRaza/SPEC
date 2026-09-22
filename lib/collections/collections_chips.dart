@@ -196,7 +196,11 @@ class _CollectionsChipsState extends State<CollectionsChips> {
               onSubmitted: (value) =>
                   unawaited(_commit(value, isSubmitted: true)),
             )
-          : Row(
+          // Wrap, not a horizontal scroller: there are two chips, and a
+          // scroller would hide the second one rather than move it down.
+          : Wrap(
+              spacing: _chipGap,
+              runSpacing: _chipGap,
               children: [
                 _Chip(
                   label: '+ NEW ZONE',
@@ -205,8 +209,7 @@ class _CollectionsChipsState extends State<CollectionsChips> {
                   border: CollectionsColors.chipBorder,
                   onTap: _open,
                 ),
-                if (widget.onExport != null) ...[
-                  const SizedBox(width: _chipGap),
+                if (widget.onExport != null)
                   _Chip(
                     label: 'EXPORT',
                     style: CollectionsText.chip.copyWith(
@@ -219,7 +222,6 @@ class _CollectionsChipsState extends State<CollectionsChips> {
                     flash: _isMotionReduced ? Duration.zero : _flashDuration,
                     onTap: _export,
                   ),
-                ],
               ],
             ),
     );

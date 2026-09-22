@@ -102,7 +102,11 @@ Widget _paint(String name, double chipness) {
       style: style,
       maxLines: 1,
       softWrap: false,
-      overflow: TextOverflow.visible,
+      // Matches the resting row's truncation. Visible overflow let a long
+      // name paint straight over the count and remove controls, and the
+      // shuttle renders `from.name` at both ends, so both must truncate the
+      // same way for the flight to stay continuous.
+      overflow: TextOverflow.ellipsis,
     ),
   );
 }

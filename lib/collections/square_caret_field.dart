@@ -3,12 +3,16 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 /// Half of the caret's 1060ms hard-step cycle.
 const _blinkHalfPeriod = Duration(milliseconds: 530);
 
 const _caretWidth = 2.0;
+
+/// The caret's designed height. It grows with the text scale so it stays in
+/// proportion to the glyphs it sits beside, capped at the app's own ceiling.
 const _caretHeight = 24.0;
 
 const _underlineHeight = 1.5;
@@ -137,11 +141,16 @@ class _SquareCaretFieldState extends State<SquareCaretField> {
                   left: _caretX(context, constraints.maxWidth),
                   top: 0,
                   bottom: 0,
-                  child: const Center(
+                  child: Center(
                     child: SizedBox(
                       width: _caretWidth,
-                      height: _caretHeight,
-                      child: ColoredBox(color: SpecColors.accent),
+                      height: MediaQuery.textScalerOf(context)
+                          .scale(_caretHeight)
+                          .clamp(
+                            _caretHeight,
+                            _caretHeight * SpecLayout.maxTextScale,
+                          ),
+                      child: const ColoredBox(color: SpecColors.accent),
                     ),
                   ),
                 ),

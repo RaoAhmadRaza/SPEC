@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -10,16 +11,19 @@ import 'package:spec/collections/collections_tokens.dart';
 import 'package:spec/collections/zone_list.dart';
 import 'package:spec/collections/zone_row.dart';
 import 'package:spec/data/zone_repository.dart';
+
+import 'package:spec/home/home_tab_bar.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
-/// 56 for the status bar, 18 either side, and 112 at the bottom so the last
-/// row scrolls clear of the floating tab bar.
+/// 56 for the status bar and 18 either side. The bottom comes from
+/// [specShellChromeHeight] so the last row clears the floating tab bar
+/// without this file carrying the bar's dimensions.
 ///
 /// The list's viewport starts at [_top] rather than the content inside it,
 /// so scrolled rows are clipped there and never pass under the status bar.
 const _side = 18.0;
 const _top = 56.0;
-const _bottom = 112.0;
 const _blockGap = 20.0;
 
 const _enterDuration = Duration(milliseconds: 680);
@@ -246,7 +250,7 @@ class _CollectionsScreenState extends State<CollectionsScreen>
         children: [
           const ColoredBox(color: SpecColors.bg),
           Positioned(
-            top: _top,
+            top: SpecLayout.topInset(context, design: _top),
             left: 0,
             right: 0,
             // The keyboard's top edge, so a focused field scrolls clear of
@@ -260,7 +264,9 @@ class _CollectionsScreenState extends State<CollectionsScreen>
                   _box(_buildRule()),
                   _box(_buildEmptyBlock()),
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: _side),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: _sideInset(context),
+                    ),
                     sliver: AnimatedZoneList(
                       zones: _rows,
                       itemBuilder: _buildRow,
@@ -283,7 +289,7 @@ class _CollectionsScreenState extends State<CollectionsScreen>
                       dy: 12,
                     ),
                     top: _blockGap,
-                    bottom: _bottom,
+                    bottom: specShellChromeHeight(context),
                   ),
                 ],
               ),
@@ -308,9 +314,26 @@ class _CollectionsScreenState extends State<CollectionsScreen>
     );
   }
 
+  /// The side gutter, widened on a wide screen so the column stays capped
+  /// and centred. A 54pt title and 26pt zone names spread across 1280pt are
+  /// unreadable, and the rows stretch to the full physical width otherwise.
+  ///
+  /// Padding rather than `SliverConstrainedCrossAxis`: one number caps and
+  /// centres at once, and every sliver here already takes a gutter.
+  double _sideInset(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final overflow = math.max(0.0, width - SpecLayout.maxContentWidth);
+    return _side + overflow / 2;
+  }
+
   Widget _box(Widget child, {double top = 0, double bottom = 0}) =>
       SliverPadding(
-        padding: EdgeInsets.fromLTRB(_side, top, _side, bottom),
+        padding: EdgeInsets.fromLTRB(
+          _sideInset(context),
+          top,
+          _sideInset(context),
+          bottom,
+        ),
         sliver: SliverToBoxAdapter(child: child),
       );
 

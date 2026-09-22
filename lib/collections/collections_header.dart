@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:spec/collections/collections_models.dart';
 import 'package:spec/collections/collections_tokens.dart';
 import 'package:spec/home/home_glass.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 import 'package:spec/widgets/tap_target.dart';
 
@@ -115,14 +116,30 @@ class CollectionsTitle extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        wrapTitle(const Text('MY\nSTUFF', style: CollectionsText.title)),
+        // Both sides yield. `scaleDown` only ever shrinks, so the 54pt token
+        // is untouched wherever it already fits.
+        Flexible(
+          child: wrapTitle(
+            const FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.bottomLeft,
+              child: Text(
+                'MY\nSTUFF',
+                maxLines: 2,
+                style: CollectionsText.title,
+              ),
+            ),
+          ),
+        ),
         const SizedBox(width: _titleGap),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < lines.length; i++) wrapTotal(i, lines[i]),
-          ],
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < lines.length; i++) wrapTotal(i, lines[i]),
+            ],
+          ),
         ),
       ],
     );
@@ -145,10 +162,22 @@ class CollectionsEmptyBlock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('NO ZONES\nYET.', style: CollectionsText.emptyTitle),
+          const FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'NO ZONES\nYET.',
+              maxLines: 2,
+              style: CollectionsText.emptyTitle,
+            ),
+          ),
           const SizedBox(height: _gap),
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: _bodyWidth),
+            constraints: const BoxConstraints(
+              maxWidth: _bodyWidth > SpecLayout.maxContentWidth
+                  ? SpecLayout.maxContentWidth
+                  : _bodyWidth,
+            ),
             child: const Text(
               'Zones appear as you save things. Add your first object and '
               'it lands in one.',
