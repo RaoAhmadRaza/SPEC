@@ -2,7 +2,14 @@ import 'package:flutter/widgets.dart';
 
 import 'package:spec/theme/spec_tokens.dart';
 
-const _buttonHeight = 60.0;
+/// The designed height, now a floor rather than a ceiling: a label that
+/// needs more room at a raised text scale grows the button instead of
+/// spilling out of it.
+const _minButtonHeight = 60.0;
+
+/// Air around the label. Kept small enough that a one-line label at the app's
+/// 1.5 scale ceiling still fits inside [_minButtonHeight].
+const _labelPadding = EdgeInsets.symmetric(horizontal: 20, vertical: 12);
 const _bandWidth = 70.0;
 
 /// The sweep occupies the first 60% of the cycle; the rest is a dwell with the
@@ -34,31 +41,46 @@ class ShineButton extends StatelessWidget {
     return GestureDetector(
       onTap: onPressed,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: _buttonHeight,
-        decoration: const BoxDecoration(
-          color: SpecColors.accent,
-          borderRadius: BorderRadius.all(Radius.circular(999)),
-          boxShadow: [
-            BoxShadow(
-              color: SpecColors.buttonShadow,
-              blurRadius: 44,
-              offset: Offset(0, 18),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.all(Radius.circular(999)),
-          child: LayoutBuilder(
-            builder: (context, constraints) => Stack(
-              fit: StackFit.expand,
-              children: [
-                AnimatedBuilder(
-                  animation: shine,
-                  builder: (context, _) => _buildBand(constraints.maxWidth),
-                ),
-                Center(child: Text(label, style: SpecText.button)),
-              ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _minButtonHeight),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: SpecColors.accent,
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+            boxShadow: [
+              BoxShadow(
+                color: SpecColors.buttonShadow,
+                blurRadius: 44,
+                offset: Offset(0, 18),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(999)),
+            child: LayoutBuilder(
+              // The label sizes the Stack, so the band has to be told to fill
+              // it rather than the other way round.
+              builder: (context, constraints) => Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned.fill(
+                    child: AnimatedBuilder(
+                      animation: shine,
+                      builder: (context, _) => _buildBand(constraints.maxWidth),
+                    ),
+                  ),
+                  Padding(
+                    padding: _labelPadding,
+                    child: Text(
+                      label,
+                      style: SpecText.button,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
