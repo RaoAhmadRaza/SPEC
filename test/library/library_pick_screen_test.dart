@@ -14,6 +14,7 @@ import 'package:spec/widgets/keyed_reflow.dart';
 import 'package:spec/widgets/square_caret_field.dart';
 
 import '../support/fonts.dart';
+import '../support/responsive.dart';
 
 const _canvas = Size(402, 874);
 
@@ -95,8 +96,207 @@ bool _isChipLit(WidgetTester tester, String label) {
   return (container.decoration! as BoxDecoration).color == SpecColors.accent;
 }
 
+/// Same frame as [_pump] on an arbitrary canvas, with real insets and scale.
+Future<void> _pumpResponsiveLibrary(
+  WidgetTester tester,
+  Widget screen, {
+  required Size canvas,
+  EdgeInsets padding = EdgeInsets.zero,
+  double textScale = 1.0,
+}) async {
+  tester.view
+    ..physicalSize = canvas * 3
+    ..devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: MediaQuery(
+        data: MediaQueryData(
+          size: canvas,
+          padding: padding,
+          viewPadding: padding,
+          textScaler: TextScaler.linear(textScale),
+        ),
+        child: Material(color: SpecColors.bg, child: screen),
+      ),
+    ),
+  );
+  await _settle(tester);
+}
+
+/// How many cells share the top edge of the first one, which is the grid's
+/// column count.
+int _gridColumns(WidgetTester tester) {
+  final cells = find.byType(LibraryCell);
+  final tops = [
+    for (var i = 0; i < cells.evaluate().length; i++)
+      tester.getRect(cells.at(i)).top,
+  ];
+  return tops.where((top) => (top - tops.first).abs() < 1).length;
+}
+
 void main() {
   setUpAll(loadSpecFonts);
+
+  group('responsive', () {
+    testWidgets('grid uses three columns at the reference canvas', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveLibrary(
+        tester,
+        _screen(),
+        canvas: specReferenceCanvas,
+      );
+
+      // Assert
+      expect(_gridColumns(tester), 3);
+    });
+
+    testWidgets('grid uses six columns on a portrait tablet', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveLibrary(
+        tester,
+        _screen(),
+        canvas: specCanvases['tabletPortrait']!,
+      );
+
+      // Assert
+      expect(_gridColumns(tester), 6);
+    });
+
+    testWidgets('rule row does not overflow at text scale 1.5', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveLibrary(
+        tester,
+        _screen(),
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Assert
+      expect(find.byType(LibraryRuleRow), findsOneWidget);
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('bottom bar does not overflow at text scale 1.5', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveLibrary(
+        tester,
+        _screen(),
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Assert
+      expect(find.byType(LibraryBottomBar), findsOneWidget);
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('last grid row scrolls clear of the bottom bar', (
+      tester,
+    ) async {
+      for (final canvas in [specCanvases['tiny']!, specReferenceCanvas]) {
+        // Arrange
+        await _pumpResponsiveLibrary(tester, _screen(), canvas: canvas);
+
+        // Act
+        final position = tester
+            .state<ScrollableState>(find.byType(Scrollable).first)
+            .position;
+        position.jumpTo(position.maxScrollExtent);
+        await _settle(tester, frames: 10);
+
+        // Assert
+        final cells = find.byType(LibraryCell);
+        final last = tester.getRect(cells.at(cells.evaluate().length - 1));
+        expect(
+          last.bottom,
+          lessThanOrEqualTo(tester.getRect(find.byType(LibraryBottomBar)).top),
+          reason: '${canvas.width}x${canvas.height}',
+        );
+      }
+    });
+
+    testWidgets('cell height already grows with text scale', (tester) async {
+      // Arrange: the function is measured on its own rather than through the
+      // screen. Changing the scale on a live grid tweens every cell between
+      // the two heights, and a frame mid-tween is briefly shorter than its
+      // content — an artifact of the reflow animation, not of the geometry.
+      Future<double> heightAt(double scale) async {
+        late double height;
+        await tester.pumpWidget(
+          MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Builder(
+                builder: (context) {
+                  height = libraryCellHeight(context);
+                  return const SizedBox();
+                },
+              ),
+            ),
+          ),
+        );
+        return height;
+      }
+
+      // Act / Assert: the measured-height mechanism still works.
+      final atOne = await heightAt(1.0);
+      expect(await heightAt(1.5), greaterThan(atOne));
+    });
+
+    for (final scale in [1.0, 1.5]) {
+      testWidgets('bottom bar centres its label and button at scale $scale', (
+        tester,
+      ) async {
+        // Arrange / Act
+        await _pumpResponsiveLibrary(
+          tester,
+          _screen(),
+          canvas: specReferenceCanvas,
+          textScale: scale,
+        );
+
+        // Assert: `GlassSurface` lays its child out in a Stack, so a loose
+        // height leaves the row pinned to the top edge while the bar paints
+        // full size. Both pieces sit on the bar's centre line or neither does.
+        final bar = tester.getRect(find.byType(LibraryBottomBar));
+        for (final finder in [
+          find.text('Not in the list?'),
+          find.text('ADD YOUR OWN'),
+        ]) {
+          expect(
+            tester.getRect(finder).center.dy,
+            closeTo(bar.center.dy, 0.5),
+            reason: 'scale $scale',
+          );
+        }
+      });
+    }
+
+    testWidgets('bottom bar clears a 34pt home indicator', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveLibrary(
+        tester,
+        _screen(),
+        canvas: specReferenceCanvas,
+        padding: const EdgeInsets.only(bottom: 34),
+      );
+
+      // Assert
+      expect(
+        specReferenceCanvas.height -
+            tester.getRect(find.byType(LibraryBottomBar)).bottom,
+        greaterThanOrEqualTo(34.0),
+      );
+    });
+  });
 
   group('the bundled library', () {
     test('holds 100 objects with unique ids', () {

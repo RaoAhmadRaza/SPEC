@@ -13,12 +13,19 @@ import 'package:spec/library/library_tokens.dart';
 import 'package:spec/search/search_header.dart';
 import 'package:spec/search/search_pill.dart';
 import 'package:spec/search/search_tokens.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 import 'package:spec/widgets/keyed_reflow.dart';
 import 'package:spec/widgets/square_caret_field.dart';
 
 /// 108 at the bottom clears the floating bar.
-const _pagePadding = EdgeInsets.fromLTRB(18, 56, 18, 108);
+const _pageSide = 18.0;
+const _pageTop = 56.0;
+
+/// Air between the last grid row and the top of the floating bar. The bar's
+/// own height and offset come from the bar, so the 108 the page used to carry
+/// is now derived: 24 + 64 + 20.
+const _barToGrid = 20.0;
 const _columnGap = 14.0;
 const _headlineMargin = 2.0;
 
@@ -27,7 +34,10 @@ const _pillBlur = 15.0;
 const _glyphSize = 19.0;
 const _glyphGap = 12.0;
 
-const _gridColumns = 3;
+/// The cell width the three-column design produces at the reference canvas:
+/// `(402 - 18 - 18 - 2 * 9) / 3`. The column count derives from it, so 402
+/// still yields exactly three.
+const _referenceCellWidth = 116.0;
 const _gridGap = 9.0;
 
 const _barInset = 16.0;
@@ -329,18 +339,23 @@ class _LibraryPickScreenState extends State<LibraryPickScreen>
             const ColoredBox(color: SpecColors.bg),
             SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: _pagePadding.copyWith(
-                bottom: _pagePadding.bottom + keyboard,
+              padding: EdgeInsets.fromLTRB(
+                _pageSide,
+                SpecLayout.topInset(context, design: _pageTop),
+                _pageSide,
+                _pageBottom(context) + keyboard,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: _buildBlocks(),
+              child: LayoutBuilder(
+                builder: (context, constraints) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: _buildBlocks(constraints.maxWidth),
+                ),
               ),
             ),
             Positioned(
               left: _barInset,
               right: _barInset,
-              bottom: _barBottom,
+              bottom: SpecLayout.bottomInset(context, design: _barBottom),
               child: _rise(
                 _bar,
                 // Hidden in the no-match state, where `PHOTOGRAPH IT` is already
@@ -364,19 +379,45 @@ class _LibraryPickScreenState extends State<LibraryPickScreen>
     );
   }
 
-  List<Widget> _buildBlocks() => [
-    _rise(
-      _header,
-      SearchHeaderRow(label: widget.stepLabel, onCancel: widget.onCancel),
+  /// What the page reserves at the bottom so the last grid row clears the
+  /// floating bar. Derived from the bar rather than repeated as 108, so the
+  /// two can never disagree.
+  double _pageBottom(BuildContext context) =>
+      SpecLayout.bottomInset(context, design: _barBottom) +
+      libraryBarHeight(context) +
+      _barToGrid;
+
+  /// Caps a block at the reading width and centres it.
+  ///
+  /// Only the prose blocks get this. The grid deliberately does not: more
+  /// width there means more columns, which is what keeps a thumbnail close to
+  /// its designed proportion instead of stretching it.
+  Widget _capped(double width, Widget child) => Center(
+    child: SizedBox(
+      width: math.min(width, SpecLayout.maxContentWidth),
+      child: child,
+    ),
+  );
+
+  List<Widget> _buildBlocks(double width) => [
+    _capped(
+      width,
+      _rise(
+        _header,
+        SearchHeaderRow(label: widget.stepLabel, onCancel: widget.onCancel),
+      ),
     ),
     const SizedBox(height: _columnGap + _headlineMargin),
-    _rise(
-      _headline,
-      const Text('WHAT\nIS IT?', style: LibraryText.headline),
-      dy: 22,
+    _capped(
+      width,
+      _rise(
+        _headline,
+        const Text('WHAT\nIS IT?', style: LibraryText.headline),
+        dy: 22,
+      ),
     ),
     const SizedBox(height: _columnGap),
-    _rise(_pill, _buildPill(), dy: 16, scaleFrom: 0.98),
+    _capped(width, _rise(_pill, _buildPill(), dy: 16, scaleFrom: 0.98)),
     const SizedBox(height: _columnGap),
     LibraryFilterChips(
       categories: widget.categories,
@@ -390,7 +431,12 @@ class _LibraryPickScreenState extends State<LibraryPickScreen>
     KeyedReflow<LibraryItem>(
       items: _shown,
       keyOf: (item) => item.id,
-      columns: _gridColumns,
+      columns: SpecLayout.columnsFor(
+        width,
+        idealCell: _referenceCellWidth,
+        min: 3,
+        max: 6,
+      ),
       crossGap: _gridGap,
       mainGap: _gridGap,
       cellHeight: libraryCellHeight(context),

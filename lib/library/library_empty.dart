@@ -95,7 +95,12 @@ class _Title extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Align(
     alignment: Alignment.centerLeft,
-    child: Text(text, style: LibraryText.emptyTitle),
+    child: Text(
+      text,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: LibraryText.emptyTitle,
+    ),
   );
 }
 

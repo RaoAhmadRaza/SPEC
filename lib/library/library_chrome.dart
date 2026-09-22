@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:spec/home/home_glass.dart';
 import 'package:spec/library/library_tokens.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 const _chipGap = 7.0;
@@ -14,7 +15,17 @@ const _chipScrollDuration = Duration(milliseconds: 240);
 
 const _countFadeDuration = Duration(milliseconds: 160);
 
-const _barHeight = 64.0;
+/// The bar's designed height. [libraryBarHeight] is what anything laying out
+/// against it should read.
+const kLibraryBarHeight = 64.0;
+
+/// The bar's height at the current text scale. The bar and the page's bottom
+/// reserve both read this, so a bar that grows cannot end up covering the
+/// last grid row. Exactly 64 at scale 1.0.
+double libraryBarHeight(BuildContext context) =>
+    MediaQuery.textScalerOf(context)
+        .scale(kLibraryBarHeight)
+        .clamp(kLibraryBarHeight, kLibraryBarHeight * SpecLayout.maxTextScale);
 const _barBlur = 15.0;
 const _squeezeDown = Duration(milliseconds: 100);
 const _squeezeUp = Duration(milliseconds: 140);
@@ -144,18 +155,33 @@ class LibraryRuleRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          AnimatedSwitcher(
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : _countFadeDuration,
-            child: Text(
-              count,
-              key: ValueKey(count),
-              style: LibraryText.ruleCount,
+          // The count is the long one, so it yields first and OFFLINE keeps
+          // its place. Neither was flexible before, so the row overflowed.
+          Flexible(
+            flex: 3,
+            child: AnimatedSwitcher(
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : _countFadeDuration,
+              child: Text(
+                count,
+                key: ValueKey(count),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: LibraryText.ruleCount,
+              ),
             ),
           ),
+          const SizedBox(width: 12),
           // A statement of fact: the library ships inside the binary.
-          const Text('OFFLINE', style: LibraryText.offline),
+          const Flexible(
+            child: Text(
+              'OFFLINE',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: LibraryText.offline,
+            ),
+          ),
         ],
       ),
     );
@@ -170,8 +196,12 @@ class LibraryBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A tight height, not a `minHeight`: `GlassSurface` lays its child out in
+    // a Stack, so a loose height paints the bar at full size while the row
+    // keeps its natural height and pins to the top edge. The height still
+    // tracks the text scale, which is what a `minHeight` was reaching for.
     return SizedBox(
-      height: _barHeight,
+      height: libraryBarHeight(context),
       child: GlassSurface(
         borderRadius: BorderRadius.circular(999),
         blur: _barBlur,
@@ -199,18 +229,25 @@ class LibraryBottomBar extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Squeeze(
-                onTap: onAddOwn,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 15,
+              Flexible(
+                child: Squeeze(
+                  onTap: onAddOwn,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 15,
+                    ),
+                    decoration: BoxDecoration(
+                      color: SpecColors.accent,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Text(
+                      'ADD YOUR OWN',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: LibraryText.addOwn,
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: SpecColors.accent,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: const Text('ADD YOUR OWN', style: LibraryText.addOwn),
                 ),
               ),
             ],
