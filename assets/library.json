@@ -4,21 +4,24 @@
     "name": "Bulb",
     "category": "HOME",
     "specLabel": "BASE",
-    "exampleSpec": "B22 · E27"
+    "exampleSpec": "B22 · E27",
+    "asset": "assets/images/components/bulb.png"
   },
   {
     "id": "tyre",
     "name": "Tyre",
     "category": "CAR",
     "specLabel": "SIZE",
-    "exampleSpec": "205/55 R16"
+    "exampleSpec": "205/55 R16",
+    "asset": "assets/images/components/tyre.png"
   },
   {
     "id": "cartridge",
     "name": "Cartridge",
     "category": "DEVICES",
     "specLabel": "MODEL",
-    "exampleSpec": "67XL · 305"
+    "exampleSpec": "67XL · 305",
+    "asset": "assets/images/components/ink cartridge.png"
   },
   {
     "id": "water-filter",
@@ -46,7 +49,8 @@
     "name": "SD card",
     "category": "DEVICES",
     "specLabel": "CAPACITY",
-    "exampleSpec": "32GB · V30"
+    "exampleSpec": "32GB · V30",
+    "asset": "assets/images/components/sd card.png"
   },
   {
     "id": "bolt",
@@ -109,7 +113,8 @@
     "name": "Fridge filter",
     "category": "HOME",
     "specLabel": "MODEL",
-    "exampleSpec": "DA29-00020B"
+    "exampleSpec": "DA29-00020B",
+    "asset": "assets/images/components/filter refg.png"
   },
   {
     "id": "tap-washer",
@@ -550,7 +555,8 @@
     "name": "Shoes",
     "category": "CLOTHING",
     "specLabel": "SHOE",
-    "exampleSpec": "UK 9 · EU 43"
+    "exampleSpec": "UK 9 · EU 43",
+    "asset": "assets/images/components/sneakers.png"
   },
   {
     "id": "trainers",
