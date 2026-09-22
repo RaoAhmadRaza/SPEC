@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 /// Master timeline, matching the loop in the design file. Every interval
@@ -51,6 +52,16 @@ const _ghostFadeInStart = 0.15;
 const _ghostPeak = 0.45;
 const _ghostFadeOutEnd = 0.75;
 const _ghostPeakOpacity = 0.5;
+
+/// The viewport the screen was drawn on. Every absolute offset below is
+/// expressed as a fraction of these, so at 402 x 874 the arithmetic returns
+/// the original literal and nothing moves.
+const _designWidth = 402.0;
+const _designHeight = 874.0;
+
+/// Side air the wordmark keeps inside the centre column before it starts to
+/// scale down. Without it the four glyphs touch the edge on a 320pt phone.
+const _wordmarkGutter = 24.0;
 
 /// SPEC splash (design file screen 12), rebuilt 1:1 at 402 x 874 pt.
 class SplashScreen extends StatefulWidget {
@@ -176,6 +187,16 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final contentWidth = SpecLayout.contentWidth(context);
+    final bottomInset = SpecLayout.bottomInset(context, design: 52);
+    // The glow has to stay wider than the frame to read as atmosphere. On a
+    // phone that is the designed 640; on a tablet it grows by the same ratio
+    // it holds against the reference's narrow edge, so a 1280pt iPad gets a
+    // wash rather than a disc.
+    final glowSize = SpecLayout.isExpanded(context)
+        ? size.shortestSide * (_glowSize / _designWidth)
+        : _glowSize;
     return AnimatedBuilder(
       animation: Listenable.merge([_master, _glow, _exit]),
       builder: (context, _) {
@@ -195,32 +216,32 @@ class _SplashScreenState extends State<SplashScreen>
             fit: StackFit.expand,
             children: [
               ColoredBox(color: SpecColors.bg.withValues(alpha: fade)),
-              _buildGlow(fade),
+              _buildGlow(fade, glowSize),
               Positioned(
-                left: 34,
-                top: 214,
+                left: size.width * (34 / _designWidth),
+                top: size.height * (214 / _designHeight),
                 child: _buildGhost('B22', 0, fade),
               ),
               Positioned(
-                right: 32,
-                top: 266,
+                right: size.width * (32 / _designWidth),
+                top: size.height * (266 / _designHeight),
                 child: _buildGhost('205/55 R16', 1, fade),
               ),
               Positioned(
-                left: 52,
-                bottom: 268,
+                left: size.width * (52 / _designWidth),
+                bottom: size.height * (268 / _designHeight),
                 child: _buildGhost('LT1000P', 2, fade),
               ),
               Positioned(
-                right: 44,
-                bottom: 238,
+                right: size.width * (44 / _designWidth),
+                bottom: size.height * (238 / _designHeight),
                 child: _buildGhost('67XL', 3, fade),
               ),
-              Center(child: _buildCenterColumn(fade, ruleFade)),
+              Center(child: _buildCenterColumn(fade, ruleFade, contentWidth)),
               Positioned(
                 left: 0,
                 right: 0,
-                bottom: 52,
+                bottom: bottomInset,
                 child: _buildBottomBlock(fade),
               ),
             ],
@@ -230,7 +251,7 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  Widget _buildGlow(double fade) {
+  Widget _buildGlow(double fade, double glowSize) {
     final t = Curves.easeInOut.transform(_glow.value);
     final opacity = _glowOpacityMin + (_glowOpacityMax - _glowOpacityMin) * t;
     final scale = _glowScaleMin + (_glowScaleMax - _glowScaleMin) * t;
@@ -241,8 +262,8 @@ class _SplashScreenState extends State<SplashScreen>
           child: Transform.scale(
             scale: scale,
             child: Container(
-              width: _glowSize,
-              height: _glowSize,
+              width: glowSize,
+              height: glowSize,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
@@ -269,43 +290,57 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  Widget _buildCenterColumn(double fade, double ruleFade) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildWordmark(fade),
-        const SizedBox(height: 18),
-        _buildRule(ruleFade),
-        const SizedBox(height: 18),
-        _riseIn(
-          _taglineAnim,
-          fade,
-          const Text(
-            'REMEMBER THE SPECS\nFORGET THE SEARCH',
-            textAlign: TextAlign.center,
-            style: SpecText.tagline,
+  Widget _buildCenterColumn(double fade, double ruleFade, double maxWidth) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildWordmark(fade, maxWidth - _wordmarkGutter * 2),
+          const SizedBox(height: 18),
+          _buildRule(ruleFade),
+          const SizedBox(height: 18),
+          _riseIn(
+            _taglineAnim,
+            fade,
+            const Text(
+              'REMEMBER THE SPECS\nFORGET THE SEARCH',
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: SpecText.tagline,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildWordmark(double fade) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < _letters.length; i++)
-          _buildLetter(_letters[i], _letterAnims[i], fade),
-        Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: _riseIn(
-            _trademarkAnim,
-            fade,
-            const Text('™', style: SpecText.trademark),
-          ),
+  /// [BoxFit.scaleDown] only ever shrinks, so the 92pt design size survives
+  /// untouched at the reference canvas and a narrow phone or a raised text
+  /// scale shrinks the wordmark instead of clipping it.
+  Widget _buildWordmark(double fade, double maxWidth) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < _letters.length; i++)
+              _buildLetter(_letters[i], _letterAnims[i], fade),
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: _riseIn(
+                _trademarkAnim,
+                fade,
+                const Text('™', style: SpecText.trademark),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
