@@ -3,9 +3,14 @@ import 'package:flutter/widgets.dart';
 
 import 'package:spec/add/add_icons.dart';
 import 'package:spec/add/add_tokens.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 const _tileHeight = 96.0;
+
+/// The tile's shape at the reference canvas, used on expanded so a wider
+/// cell grows taller instead of letting the icon and label drift apart.
+const _tileRatio = 113.33 / _tileHeight;
 const _tilePadding = EdgeInsets.all(13);
 const _tileRadius = BorderRadius.all(Radius.circular(18));
 
@@ -110,8 +115,12 @@ class _TypeTileState extends State<TypeTile> {
   /// [t] runs 0 (unselected) to 1 (selected) and drives every part of the
   /// treatment at once, so the two tiles read as one exchange.
   Widget _buildTile(double t) {
-    return Container(
-      height: _tileHeight,
+    // Fixed on a phone, where the design's 96 is right. On a tablet the cell
+    // is wider, so the tile keeps its shape instead of letting the icon and
+    // label drift apart inside a squat box.
+    final isExpanded = SpecLayout.isExpanded(context);
+    final tile = Container(
+      height: isExpanded ? null : _tileHeight,
       padding: _tilePadding,
       decoration: BoxDecoration(
         color: Color.lerp(AddColors.tileFill, AddColors.selectedTileFill, t),
@@ -164,6 +173,9 @@ class _TypeTileState extends State<TypeTile> {
         ],
       ),
     );
+    return isExpanded
+        ? AspectRatio(aspectRatio: _tileRatio, child: tile)
+        : tile;
   }
 
   /// Always laid out, so the tile's geometry never depends on selection. A

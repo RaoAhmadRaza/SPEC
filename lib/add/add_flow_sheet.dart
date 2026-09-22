@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/widgets.dart';
@@ -13,6 +14,24 @@ import 'package:spec/add/add_what_sheet.dart';
 
 /// Where step 05's sheet anchors its top edge.
 const kFieldsSheetTop = 96.0;
+
+/// The most of a viewport the sheet may ever take.
+const _maxSheetFraction = 0.92;
+
+/// Step 05's sheet height: leave a 96pt peek of Home at the top, but never
+/// give away more than 8% of a short viewport to that peek.
+///
+/// At 874 the peek wins (778 < 804), so the reference rendering is unchanged.
+/// The fraction only binds above roughly 1200pt of height; below that the
+/// subtraction is already the smaller of the two. Clamped at zero so a
+/// viewport shorter than the peek cannot ask for a negative height.
+double addFieldsSheetHeight(BuildContext context) {
+  final height = MediaQuery.sizeOf(context).height;
+  return math.max(
+    0.0,
+    math.min(height - kFieldsSheetTop, height * _maxSheetFraction),
+  );
+}
 
 /// The manual branch: 04 then 05.
 const _manualSteps = 2;
@@ -132,7 +151,7 @@ class _AddFlowSheetState extends State<AddFlowSheet>
 
   @override
   Widget build(BuildContext context) {
-    final fullHeight = MediaQuery.sizeOf(context).height - kFieldsSheetTop;
+    final fullHeight = addFieldsSheetHeight(context);
     return PopScope(
       canPop: !_hasFields,
       onPopInvokedWithResult: (didPop, _) {

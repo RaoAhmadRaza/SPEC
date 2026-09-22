@@ -130,9 +130,17 @@ class ManualFieldRow extends StatelessWidget {
               padding: _rowPadding,
               child: Row(
                 children: [
-                  SizedBox(
-                    width: _labelWidth,
-                    child: Text(label, style: ManualText.fieldLabel),
+                  // A floor rather than a fixed width, so a scaled label can
+                  // claim a little more room instead of clipping. 56 stays the
+                  // design width, which is what aligns the two values.
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: _labelWidth),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: ManualText.fieldLabel,
+                    ),
                   ),
                   const SizedBox(width: _gap),
                   Expanded(child: valueWrapper?.call(field) ?? field),

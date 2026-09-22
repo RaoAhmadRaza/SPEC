@@ -15,22 +15,48 @@ import 'package:spec/add/manual_tokens.dart';
 import 'package:spec/add/photo_drop_card.dart';
 import 'package:spec/add/plain_field_theme.dart';
 import 'package:spec/search/search_header.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 /// The same header every add step draws, so a push flies it onto itself.
 const kAddStepHeaderTag = 'add-step-header';
 
-/// 128 at the bottom clears the pinned button block.
-const _pagePadding = EdgeInsets.fromLTRB(18, 56, 18, 128);
+const _pageSide = 18.0;
+const _pageTop = 56.0;
+
+/// What the pinned block occupies above its own bottom inset: the return bar,
+/// the button, the caption and the gaps between them. Added to the inset it
+/// gives the 128 the page used to carry as a literal, and it follows the
+/// inset when a home indicator pushes the block up.
+const _blockReserve = 104.0;
 const _blockGap = 16.0;
 const _nudge = 2.0;
 const _verdictGap = 10.0;
 const _ruleToText = 18.0;
 const _bodyMaxWidth = 300.0;
+
+/// A ceiling, not a fixed height. On a short viewport — or once the keyboard
+/// has taken most of it — the card gives its room to the fields instead. The
+/// photo is drawn with `BoxFit.contain`, so a shorter card letterboxes rather
+/// than cropping the label the photo was taken for.
 const _photoHeight = 210.0;
+
+/// The height the 210 was drawn against. `available * 210 / 874` is exactly
+/// 210 at the reference canvas with no keyboard.
+const _photoReferenceHeight = 874.0;
 const _fieldGap = 9.0;
 const _hintGap = 12.0;
 const _bottomInsets = EdgeInsets.fromLTRB(16, 0, 16, 24);
+
+/// The bottom block's offset.
+///
+/// The safe-area inset applies **only** when the keyboard is closed. With the
+/// keyboard up it already covers the home indicator, so adding the inset on
+/// top would lift the block roughly 34pt too far. Do not collapse this into
+/// one expression.
+double _blockBottom(BuildContext context, double keyboard) => keyboard > 0
+    ? keyboard
+    : SpecLayout.bottomInset(context, design: _bottomInsets.bottom);
 const _bottomGap = 10.0;
 
 /// How far above the button block a focused field comes to rest.
@@ -250,7 +276,10 @@ class _NotInLibraryScreenState extends State<NotInLibraryScreen>
     final overlap = rowTop + row.size.height - clearance;
     final delta = overlap > 0
         ? overlap
-        : math.min(0.0, rowTop - _pagePadding.top);
+        : math.min(
+            0.0,
+            rowTop - SpecLayout.topInset(context, design: _pageTop),
+          );
     final position = _scroll.position;
     final target = (position.pixels + delta).clamp(
       position.minScrollExtent,
@@ -317,31 +346,38 @@ class _NotInLibraryScreenState extends State<NotInLibraryScreen>
             children: [
               SingleChildScrollView(
                 controller: _scroll,
-                padding: _pagePadding.copyWith(
-                  bottom: _pagePadding.bottom + keyboard,
+                padding: EdgeInsets.fromLTRB(
+                  _pageSide,
+                  SpecLayout.topInset(context, design: _pageTop),
+                  _pageSide,
+                  _blockBottom(context, keyboard) + _blockReserve + keyboard,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _fadeOnExit(exit, _exitAll, _buildHeader()),
-                    const SizedBox(height: _blockGap),
-                    _fadeOnExit(exit, _exitAll, _buildSearch()),
-                    const SizedBox(height: _blockGap + _nudge),
-                    _fadeOnExit(exit, _exitAll, _buildVerdict()),
-                    const SizedBox(height: _blockGap + _nudge),
-                    _buildPhotoCard(exit),
-                    const SizedBox(height: _blockGap),
-                    _buildFields(exit),
-                    const SizedBox(height: _hintGap),
-                    _fadeOnExit(exit, _exitAll, _buildHint()),
-                  ],
+                child: _capped(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _fadeOnExit(exit, _exitAll, _buildHeader()),
+                      const SizedBox(height: _blockGap),
+                      _fadeOnExit(exit, _exitAll, _buildSearch()),
+                      const SizedBox(height: _blockGap + _nudge),
+                      _fadeOnExit(exit, _exitAll, _buildVerdict()),
+                      const SizedBox(height: _blockGap + _nudge),
+                      _buildPhotoCard(exit),
+                      const SizedBox(height: _blockGap),
+                      _buildFields(exit),
+                      const SizedBox(height: _hintGap),
+                      _fadeOnExit(exit, _exitAll, _buildHint()),
+                    ],
+                  ),
                 ),
               ),
               Positioned(
                 left: _bottomInsets.left,
                 right: _bottomInsets.right,
-                bottom: _bottomInsets.bottom + keyboard,
-                child: _fadeOnExit(exit, _exitAll, _buildBottomBlock()),
+                bottom: _blockBottom(context, keyboard),
+                child: _capped(
+                  _fadeOnExit(exit, _exitAll, _buildBottomBlock()),
+                ),
               ),
             ],
           ),
@@ -424,10 +460,31 @@ class _NotInLibraryScreenState extends State<NotInLibraryScreen>
     );
   }
 
+  /// The card's height: the designed 210, or the same share of a shorter
+  /// viewport. Exactly 210 at the reference canvas with no keyboard.
+  double _photoCardHeight(BuildContext context) {
+    final available =
+        MediaQuery.sizeOf(context).height -
+        MediaQuery.viewInsetsOf(context).bottom;
+    return math.min(
+      _photoHeight,
+      available * _photoHeight / _photoReferenceHeight,
+    );
+  }
+
+  /// Caps a block at the reading width and centres it, so the button is not
+  /// 1248pt wide on an iPad.
+  Widget _capped(Widget child) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: SpecLayout.maxContentWidth),
+      child: child,
+    ),
+  );
+
   Widget _buildPhotoCard(Animation<double> exit) {
     final card = PhotoDropCard(
       photo: _photo,
-      height: _photoHeight,
+      height: _photoCardHeight(context),
       borderRadius: manualPhotoRadius,
       chipFadeDuration: _chipFade,
       isMotionReduced: _isMotionReduced,

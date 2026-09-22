@@ -2,11 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spec/add/add_flow_sheet.dart';
 import 'package:spec/add/add_sheet_route.dart';
+import 'package:spec/add/add_sheet_shell.dart';
 import 'package:spec/add/add_tokens.dart';
 import 'package:spec/add/add_what_sheet.dart';
+import 'package:spec/theme/spec_layout.dart';
 
 import '../support/fonts.dart';
+import '../support/responsive.dart';
 
 const _canvas = Size(402, 874);
 const _settle = Duration(milliseconds: 1200);
@@ -71,8 +75,98 @@ double _dim(WidgetTester tester) {
 double _sheetTop(WidgetTester tester) =>
     tester.getTopLeft(find.byType(AddWhatSheet)).dy;
 
+/// Opens the flow on an arbitrary canvas and returns the sheet's box.
+Future<Rect> _openOn(WidgetTester tester, Size canvas) async {
+  tester.view
+    ..physicalSize = canvas * 3
+    ..devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MediaQuery(
+      data: MediaQueryData(size: canvas),
+      child: MaterialApp(
+        home: Builder(
+          builder: (context) => GestureDetector(
+            onTap: () => showAddFlow(context, onSave: (_) {}),
+            child: const Center(child: Text('HOME')),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('HOME'));
+  await tester.pump();
+  await tester.pump(_settle);
+  return tester.getRect(find.byType(AddSheetShell).first);
+}
+
+/// The height step 05 asks for on [canvas], read through a real element.
+Future<double> _fieldsHeightOn(WidgetTester tester, Size canvas) async {
+  late double height;
+  await tester.pumpWidget(
+    MediaQuery(
+      data: MediaQueryData(size: canvas),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Builder(
+          builder: (context) {
+            height = addFieldsSheetHeight(context);
+            return const SizedBox();
+          },
+        ),
+      ),
+    ),
+  );
+  return height;
+}
+
 void main() {
   setUpAll(loadSpecFonts);
+
+  group('responsive', () {
+    testWidgets('sheet height is unchanged at the reference canvas', (
+      tester,
+    ) async {
+      // Arrange / Act / Assert: the clamp is a no-op at 874.
+      expect(await _fieldsHeightOn(tester, specReferenceCanvas), 874.0 - 96);
+    });
+
+    testWidgets('sheet height never exceeds 92% of a landscape tablet', (
+      tester,
+    ) async {
+      // Arrange
+      final canvas = specCanvases['tabletLandscape']!;
+
+      // Act
+      final height = await _fieldsHeightOn(tester, canvas);
+
+      // Assert
+      expect(height, greaterThan(0));
+      expect(height, lessThanOrEqualTo(canvas.height * 0.92));
+    });
+
+    testWidgets('sheet is full-bleed on a phone', (tester) async {
+      // Arrange / Act
+      final sheet = await _openOn(tester, specReferenceCanvas);
+
+      // Assert: the cap is infinite below the expanded breakpoint.
+      expect(sheet.width, specReferenceCanvas.width);
+    });
+
+    testWidgets('sheet is capped and centred on a landscape tablet', (
+      tester,
+    ) async {
+      // Arrange
+      final canvas = specCanvases['tabletLandscape']!;
+
+      // Act
+      final sheet = await _openOn(tester, canvas);
+
+      // Assert
+      expect(sheet.width, lessThanOrEqualTo(SpecLayout.maxContentWidth));
+      expect(sheet.center.dx, closeTo(canvas.width / 2, 0.5));
+    });
+  });
 
   testWidgets('the sheet rises over the live page, which stays mounted', (
     tester,

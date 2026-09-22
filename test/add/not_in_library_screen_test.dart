@@ -9,8 +9,10 @@ import 'package:spec/add/manual_return_bar.dart';
 import 'package:spec/add/manual_tokens.dart';
 import 'package:spec/add/not_in_library_screen.dart';
 import 'package:spec/add/photo_drop_card.dart';
+import 'package:spec/theme/spec_layout.dart';
 
 import '../support/fonts.dart';
+import '../support/responsive.dart';
 
 const _canvas = Size(402, 874);
 
@@ -94,8 +96,153 @@ double _visibility(WidgetTester tester, Finder of) {
 BorderRadius _rowRadius(WidgetTester tester, String label) =>
     tester.widget<ManualFieldRow>(_row(label)).borderRadius;
 
+/// The pinned block's box: from the return bar's top to the privacy line's
+/// bottom, which is the whole thing the fields must stay clear of.
+Rect _bottomBlock(WidgetTester tester) {
+  final bar = tester.getRect(find.byType(ManualReturnBar));
+  final caption = tester.getRect(find.text('NOTHING LEAVES THIS PHONE'));
+  return Rect.fromLTRB(bar.left, bar.top, bar.right, caption.bottom);
+}
+
+/// The same screen on an arbitrary canvas, with real insets.
+///
+/// The reveal schedules two post-frame callbacks, and the suite never uses
+/// `pumpAndSettle` (the caret blinks forever), so this pumps fixed rounds.
+Future<void> _pumpResponsiveScreen(
+  WidgetTester tester, {
+  required Size canvas,
+  EdgeInsets padding = EdgeInsets.zero,
+  EdgeInsets viewInsets = EdgeInsets.zero,
+  double textScale = 1.0,
+}) async {
+  tester.view
+    ..physicalSize = canvas * 3
+    ..devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      home: MediaQuery(
+        data: MediaQueryData(
+          size: canvas,
+          padding: padding,
+          viewPadding: padding,
+          viewInsets: viewInsets,
+          textScaler: TextScaler.linear(textScale),
+        ),
+        child: NotInLibraryScreen(
+          query: 'moka pot gasket',
+          onAdd: (_) {},
+          countLibraryMatches: (_) => 0,
+        ),
+      ),
+    ),
+  );
+  await _run(tester, _settle);
+}
+
 void main() {
   setUpAll(loadSpecFonts);
+
+  group('responsive', () {
+    testWidgets('photo card is 210pt tall at the reference canvas with no '
+        'keyboard', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveScreen(tester, canvas: specReferenceCanvas);
+
+      // Assert: the ceiling is a no-op at the canvas it was drawn against.
+      expect(tester.getSize(find.byType(PhotoDropCard)).height, 210.0);
+    });
+
+    for (final name in ['tiny', 'ref', 'tabletLandscape']) {
+      testWidgets('focused SPEC field is never covered by the pinned block '
+          'on $name', (tester) async {
+        // Arrange
+        final canvas = specCanvases[name]!;
+        await _pumpResponsiveScreen(
+          tester,
+          canvas: canvas,
+          viewInsets: const EdgeInsets.only(bottom: 300),
+        );
+
+        // Act: the reveal runs across two post-frame callbacks, then animates.
+        await tester.tap(_fieldIn(_row('SPEC')));
+        await _run(tester, _settle);
+
+        // Assert
+        expect(
+          tester.getRect(_row('SPEC')).overlaps(_bottomBlock(tester)),
+          isFalse,
+          reason: name,
+        );
+      });
+    }
+
+    testWidgets('bottom block clears a 34pt home indicator when the keyboard '
+        'is closed', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveScreen(
+        tester,
+        canvas: specReferenceCanvas,
+        padding: const EdgeInsets.only(bottom: 34),
+      );
+
+      // Assert
+      expect(
+        specReferenceCanvas.height - _bottomBlock(tester).bottom,
+        greaterThanOrEqualTo(34.0),
+      );
+    });
+
+    testWidgets('bottom block is not pushed too high when the keyboard is '
+        'open', (tester) async {
+      // Arrange / Act: both insets set at once.
+      await _pumpResponsiveScreen(
+        tester,
+        canvas: specReferenceCanvas,
+        padding: const EdgeInsets.only(bottom: 34),
+        viewInsets: const EdgeInsets.only(bottom: 300),
+      );
+
+      // Assert: the keyboard already covers the indicator, so the block sits
+      // at exactly 300 — not 334.
+      expect(
+        specReferenceCanvas.height - _bottomBlock(tester).bottom,
+        closeTo(300.0, 0.01),
+      );
+    });
+
+    testWidgets('field label does not clip at text scale 1.5', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveScreen(
+        tester,
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Assert
+      expect(find.text('SPEC'), findsWidgets);
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('content and bottom block are capped on a landscape tablet', (
+      tester,
+    ) async {
+      // Arrange
+      final canvas = specCanvases['tabletLandscape']!;
+
+      // Act
+      await _pumpResponsiveScreen(tester, canvas: canvas);
+
+      // Assert
+      final block = _bottomBlock(tester);
+      expect(block.width, lessThanOrEqualTo(SpecLayout.maxContentWidth));
+      expect(block.center.dx, closeTo(canvas.width / 2, 0.5));
+      expect(
+        tester.getSize(find.byType(PhotoDropCard)).width,
+        lessThanOrEqualTo(SpecLayout.maxContentWidth),
+      );
+    });
+  });
 
   group('filled', () {
     testWidgets('lays out on the 402pt canvas without overflow', (

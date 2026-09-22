@@ -11,6 +11,7 @@ import 'package:spec/add/add_location_row.dart';
 import 'package:spec/add/add_tokens.dart';
 import 'package:spec/add/add_value_field.dart';
 import 'package:spec/data/models/spec_models.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 /// No grab handle: this step continues a sheet, it is not a new one.
@@ -373,7 +374,11 @@ class _AddFieldsSheetState extends State<AddFieldsSheet>
   @override
   Widget build(BuildContext context) {
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
-    final bottom = keyboard > 0 ? keyboard + _keyboardClearance : _bottomInset;
+    // With the keyboard up it already covers the home indicator, so the safe
+    // inset applies only to the resting branch.
+    final bottom = keyboard > 0
+        ? keyboard + _keyboardClearance
+        : SpecLayout.bottomInset(context, design: _bottomInset);
     return DefaultTextStyle(
       style: const TextStyle(
         fontFamily: SpecFonts.display,
@@ -450,7 +455,15 @@ class _AddFieldsSheetState extends State<AddFieldsSheet>
             ),
           ),
         ),
-        Text(widget.stepLabel, style: AddText.monoLabel),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            widget.stepLabel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AddText.monoLabel,
+          ),
+        ),
       ],
     );
   }
@@ -590,16 +603,34 @@ class _AddFieldsSheetState extends State<AddFieldsSheet>
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              const Text('REMIND ME', style: AddText.reminderLabel),
-              AnimatedSwitcher(
-                duration: _isMotionReduced ? Duration.zero : _reminderSwap,
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeOut,
-                transitionBuilder: _advance,
+              // The value gets the larger share: it is the longer string
+              // ('EVERY 6 MONTHS') and the one that carries the meaning, so
+              // the label is what truncates first. Neither could shrink
+              // before, and at 1.5 the pair overflowed a 276pt row.
+              const Flexible(
                 child: Text(
-                  reminderLabel(_reminder),
-                  key: ValueKey(_reminder),
-                  style: AddText.reminderValue,
+                  'REMIND ME',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AddText.reminderLabel,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                flex: 2,
+                child: AnimatedSwitcher(
+                  duration: _isMotionReduced ? Duration.zero : _reminderSwap,
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeOut,
+                  transitionBuilder: _advance,
+                  child: Text(
+                    reminderLabel(_reminder),
+                    key: ValueKey(_reminder),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: AddText.reminderValue,
+                  ),
                 ),
               ),
             ],

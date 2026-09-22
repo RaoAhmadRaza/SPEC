@@ -13,6 +13,7 @@ import 'package:spec/data/models/spec_models.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 import '../support/fonts.dart';
+import '../support/responsive.dart';
 
 const _canvas = Size(402, 874);
 
@@ -126,8 +127,105 @@ double _caretOpacity(WidgetTester tester) => tester
     )
     .opacity;
 
+/// The same sheet on an arbitrary canvas, with real insets and text scale.
+Future<void> _pumpResponsiveSheet(
+  WidgetTester tester, {
+  required Size canvas,
+  EdgeInsets viewInsets = EdgeInsets.zero,
+  double textScale = 1.0,
+  AddType type = AddType.device,
+}) async {
+  tester.view
+    ..physicalSize = canvas * 3
+    ..devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MediaQuery(
+      data: MediaQueryData(
+        size: canvas,
+        viewInsets: viewInsets,
+        textScaler: TextScaler.linear(textScale),
+      ),
+      child: MaterialApp(
+        home: Align(
+          alignment: Alignment.bottomCenter,
+          child: SizedBox(
+            height: canvas.height - 96,
+            child: AddFieldsSheet(
+              type: type,
+              zone: 'Kitchen',
+              zones: starterZones,
+              stepLabel: 'STEP 2 / 2',
+              onSave: (_) {},
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump(_settle);
+}
+
 void main() {
   setUpAll(loadSpecFonts);
+
+  group('responsive', () {
+    testWidgets('reminder row does not overflow at text scale 1.5', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveSheet(
+        tester,
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Walk the whole cycle, so the longest label the row ever carries
+      // ('EVERY 6 MONTHS') is rendered at some point.
+      for (var i = 0; i < 6; i++) {
+        await tester.tap(find.text('REMIND ME'));
+        await tester.pump(_settle);
+        expectNoOverflow(tester);
+      }
+
+      // Assert
+      expect(find.text('REMIND ME'), findsOneWidget);
+    });
+
+    testWidgets('context row does not overflow at text scale 1.5', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveSheet(
+        tester,
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Assert
+      expect(find.text('STEP 2 / 2'), findsOneWidget);
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('SAVE stays visible with a 300pt keyboard on a tiny screen', (
+      tester,
+    ) async {
+      // Arrange
+      final canvas = specCanvases['tiny']!;
+
+      // Act
+      await _pumpResponsiveSheet(
+        tester,
+        canvas: canvas,
+        viewInsets: const EdgeInsets.only(bottom: 300),
+      );
+
+      // Assert: the form scrolls, the button does not go under the keyboard.
+      final save = tester.getRect(find.text('SAVE'));
+      expect(save.bottom, lessThanOrEqualTo(canvas.height - 300));
+      expectNoOverflow(tester);
+    });
+  });
 
   group('layout', () {
     testWidgets('fills its box at 402pt with nothing overflowing', (

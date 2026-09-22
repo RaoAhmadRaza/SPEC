@@ -9,16 +9,22 @@ import 'package:spec/add/add_kinds.dart';
 import 'package:spec/add/add_tokens.dart';
 import 'package:spec/add/photo_drop_card.dart';
 import 'package:spec/add/type_tile.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 /// 22 either side, matching the object screen rather than Home's 18. The 46 at
 /// the bottom clears the home indicator.
-const _sheetPadding = EdgeInsets.fromLTRB(22, 14, 22, 46);
+const _sheetSide = 22.0;
+const _sheetTop = 14.0;
+const _sheetBottom = 46.0;
 const _blockGap = 24.0;
 const _handleSize = Size(38, 5);
 const _handleRadius = BorderRadius.all(Radius.circular(999));
 
-const _gridColumns = 3;
+/// The tile width the three-column design produces at the reference canvas:
+/// `(402 - 44 - 2 * 9) / 3`. The column count derives from it, so 402 still
+/// yields exactly three.
+const _referenceTileWidth = 113.33;
 const _gridGap = 9.0;
 
 const _continueHeight = 56.0;
@@ -162,7 +168,12 @@ class _AddWhatSheetState extends State<AddWhatSheet>
         decoration: TextDecoration.none,
       ),
       child: Padding(
-        padding: _sheetPadding,
+        padding: EdgeInsets.fromLTRB(
+          _sheetSide,
+          _sheetTop,
+          _sheetSide,
+          SpecLayout.bottomInset(context, design: _sheetBottom),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
@@ -231,23 +242,38 @@ class _AddWhatSheetState extends State<AddWhatSheet>
   }
 
   Widget _buildGrid() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var row = 0; row * _gridColumns < _types.length; row++) ...[
-          if (row > 0) const SizedBox(height: _gridGap),
-          Row(
-            children: [
-              for (var column = 0; column < _gridColumns; column++) ...[
-                if (column > 0) const SizedBox(width: _gridGap),
-                // `minmax(0, 1fr)`: an over-long label ellipsizes rather than
-                // widening its track.
-                Expanded(child: _buildTile(row * _gridColumns + column)),
-              ],
+    // The manual Row loop stays; only its chunk size is derived now.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = SpecLayout.columnsFor(
+          constraints.maxWidth,
+          idealCell: _referenceTileWidth,
+          min: 3,
+          max: 5,
+        );
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var row = 0; row * columns < _types.length; row++) ...[
+              if (row > 0) const SizedBox(height: _gridGap),
+              Row(
+                children: [
+                  for (var column = 0; column < columns; column++) ...[
+                    if (column > 0) const SizedBox(width: _gridGap),
+                    // `minmax(0, 1fr)`: an over-long label ellipsizes rather
+                    // than widening its track.
+                    Expanded(
+                      child: row * columns + column < _types.length
+                          ? _buildTile(row * columns + column)
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ],
+              ),
             ],
-          ),
-        ],
-      ],
+          ],
+        );
+      },
     );
   }
 

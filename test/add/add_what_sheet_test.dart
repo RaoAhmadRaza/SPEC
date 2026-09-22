@@ -9,6 +9,7 @@ import 'package:spec/add/type_tile.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 import '../support/fonts.dart';
+import '../support/responsive.dart';
 
 /// The canvas every number in the brief is measured against.
 const _canvas = Size(402, 874);
@@ -64,8 +65,71 @@ double _opacityAbove(WidgetTester tester, Finder of) {
   return tester.widget<Opacity>(finder).opacity;
 }
 
+/// How many tiles share the top edge of the first, which is the column count.
+int _gridColumns(WidgetTester tester) {
+  final tiles = find.byType(TypeTile);
+  final tops = [
+    for (var i = 0; i < tiles.evaluate().length; i++)
+      tester.getRect(tiles.at(i)).top,
+  ];
+  return tops.where((top) => (top - tops.first).abs() < 1).length;
+}
+
+Future<void> _pumpResponsiveWhat(
+  WidgetTester tester, {
+  required Size canvas,
+}) async {
+  tester.view
+    ..physicalSize = canvas * 3
+    ..devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MediaQuery(
+      data: MediaQueryData(size: canvas),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: AddWhatSheet(
+            initialType: defaultAddType,
+            onContinue: (_, _) {},
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump(_settle);
+}
+
 void main() {
   setUpAll(loadSpecFonts);
+
+  group('responsive', () {
+    testWidgets('type grid uses three columns at the reference canvas', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveWhat(tester, canvas: specReferenceCanvas);
+
+      // Assert
+      expect(_gridColumns(tester), 3);
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('type grid gains a column on a portrait tablet', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveWhat(
+        tester,
+        canvas: specCanvases['tabletPortrait']!,
+      );
+
+      // Assert
+      expect(_gridColumns(tester), greaterThan(3));
+      expectNoOverflow(tester);
+    });
+  });
 
   group('layout', () {
     testWidgets('blocks hold their design heights at 402pt', (tester) async {

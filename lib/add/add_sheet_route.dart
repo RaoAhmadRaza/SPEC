@@ -12,6 +12,7 @@ import 'package:spec/add/add_sheet_shell.dart';
 import 'package:spec/add/add_tokens.dart';
 import 'package:spec/add/add_what_sheet.dart';
 import 'package:spec/data/models/spec_models.dart';
+import 'package:spec/theme/spec_layout.dart';
 
 const _riseDuration = Duration(milliseconds: 420);
 const _tapDismissDuration = Duration(milliseconds: 320);
@@ -90,7 +91,7 @@ Future<void> showAddFields(
     builder: (context) => AddSheetShell(
       fill: AddColors.fieldsSheetFill,
       child: SizedBox(
-        height: MediaQuery.sizeOf(context).height - kFieldsSheetTop,
+        height: addFieldsSheetHeight(context),
         child: AddFieldsSheet(
           type: type,
           zone: zones.firstWhere(
@@ -314,7 +315,16 @@ class _AddSheetScaffoldState extends State<_AddSheetScaffold> {
               // measure it to put it off-screen.
               child: FractionalTranslation(
                 translation: Offset(0, 1 - _riseValue),
-                child: child,
+                // Full-bleed on a phone, where the cap is infinite. A
+                // 1280pt-wide bottom sheet is not a bottom sheet.
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: SpecLayout.isExpanded(context)
+                        ? SpecLayout.maxContentWidth
+                        : double.infinity,
+                  ),
+                  child: child,
+                ),
               ),
             ),
           ],
