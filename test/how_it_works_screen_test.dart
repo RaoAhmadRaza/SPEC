@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:spec/onboarding/how_it_works_screen.dart';
 import 'package:spec/onboarding/step_card.dart';
 
+import 'support/fonts.dart';
+import 'support/responsive.dart';
+
 const _enter = Duration(milliseconds: 780);
 
 /// The canvas every number in the design brief is measured against.
@@ -51,7 +54,131 @@ double _opacityOf(WidgetTester tester, Finder of) {
   return tester.widget<Opacity>(finder).opacity;
 }
 
+ScrollPosition _cardScroll(WidgetTester tester) =>
+    tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+
+/// The NEXT button's box, which is what the card region must never reach.
+Rect _nextButton(WidgetTester tester) => tester.getRect(
+  find
+      .ancestor(of: find.text('NEXT'), matching: find.byType(GestureDetector))
+      .first,
+);
+
+Future<void> _pumpResponsiveScreen(
+  WidgetTester tester, {
+  required Size canvas,
+  EdgeInsets padding = EdgeInsets.zero,
+  double textScale = 1.0,
+}) async {
+  await pumpResponsive(
+    tester,
+    HowItWorksScreen(onNext: () {}, onSkip: () {}),
+    canvas: canvas,
+    padding: padding,
+    textScale: textScale,
+  );
+  await tester.pump(_enter);
+}
+
+/// Brings every card into view in turn and checks it lands whole inside the
+/// canvas. Without the scroll view the tall cases silently overhang and clip,
+/// which no overflow banner reports.
+Future<void> _expectEveryCardReachable(
+  WidgetTester tester,
+  Size canvas,
+  String reason,
+) async {
+  for (var i = 0; i < _cardCount; i++) {
+    await tester.ensureVisible(find.byType(StepCard).at(i));
+    await tester.pump();
+    final card = tester.getRect(find.byType(StepCard).at(i));
+    expect(card.top, greaterThanOrEqualTo(0.0), reason: '$reason card $i');
+    expect(card.left, greaterThanOrEqualTo(0.0), reason: '$reason card $i');
+    expect(
+      card.right,
+      lessThanOrEqualTo(canvas.width),
+      reason: '$reason card $i',
+    );
+    expect(
+      card.bottom,
+      lessThanOrEqualTo(canvas.height),
+      reason: '$reason card $i',
+    );
+  }
+}
+
 void main() {
+  setUpAll(loadSpecFonts);
+
+  testWidgets('every card is reachable and fully visible at every canvas', (
+    tester,
+  ) async {
+    for (final MapEntry(key: name, value: canvas) in specCanvases.entries) {
+      // Arrange / Act
+      await _pumpResponsiveScreen(tester, canvas: canvas);
+
+      // Assert
+      await _expectEveryCardReachable(tester, canvas, name);
+      expectNoOverflow(tester);
+    }
+  });
+
+  testWidgets('card region scrolls rather than clipping at text scale 1.5 on '
+      'a tiny screen', (tester) async {
+    // Arrange
+    final canvas = specCanvases['tiny']!;
+
+    // Act
+    await _pumpResponsiveScreen(tester, canvas: canvas, textScale: 1.5);
+
+    // Assert
+    expect(_cardScroll(tester).maxScrollExtent, greaterThan(0.0));
+    await _expectEveryCardReachable(tester, canvas, 'tiny at 1.5');
+    expectNoOverflow(tester);
+  });
+
+  testWidgets('card region does not scroll at the reference canvas', (
+    tester,
+  ) async {
+    // Arrange / Act
+    await _pumpResponsiveScreen(tester, canvas: specReferenceCanvas);
+
+    // Assert
+    expect(_cardScroll(tester).maxScrollExtent, 0.0);
+    expectNoOverflow(tester);
+  });
+
+  testWidgets('NEXT button never overlaps the card region', (tester) async {
+    for (final MapEntry(key: name, value: canvas) in specCanvases.entries) {
+      // Arrange / Act
+      await _pumpResponsiveScreen(tester, canvas: canvas);
+
+      // Assert: the reserve and the bar read one inset, so the scrollable
+      // region always stops above the button.
+      final region = tester.getRect(find.byType(Scrollable).first);
+      expect(
+        region.bottom,
+        lessThanOrEqualTo(_nextButton(tester).top),
+        reason: name,
+      );
+    }
+  });
+
+  testWidgets('bottom bar clears a 34pt home indicator', (tester) async {
+    // Arrange / Act
+    await _pumpResponsiveScreen(
+      tester,
+      canvas: specReferenceCanvas,
+      padding: const EdgeInsets.only(bottom: 34),
+    );
+
+    // Assert
+    expect(
+      specReferenceCanvas.height - _nextButton(tester).bottom,
+      greaterThanOrEqualTo(34.0),
+    );
+  });
+
   testWidgets('the three cards undulate rather than pump together', (
     tester,
   ) async {
