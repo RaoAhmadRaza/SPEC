@@ -143,7 +143,9 @@ class MetaRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
         children: [
-          labelText,
+          // Both sides yield. With only the value flexible, the label pushed
+          // it to nothing and then overflowed anyway.
+          Flexible(child: labelText),
           const SizedBox(width: 16),
           Flexible(
             child: Align(alignment: Alignment.centerRight, child: value),

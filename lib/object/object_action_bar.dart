@@ -68,7 +68,7 @@ class _ObjectActionBarState extends State<ObjectActionBar> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: ObjectMetrics.barHeight,
+      height: objectBarHeight(context),
       child: Stack(
         // The ring expands past the bar's edge; the glass clips, the row must
         // not.
@@ -96,37 +96,65 @@ class _ObjectActionBarState extends State<ObjectActionBar> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _Labelled(
-                  editing: widget.editing,
-                  labels: const ('Edit', 'Cancel'),
-                  onTap: () => widget.onAction(BarAction.primary),
-                  child: _CrossFade(
-                    key: _keys[BarAction.primary],
-                    t: widget.editing,
-                    from: const Text('Edit', style: ObjectText.action),
-                    to: const Text('Cancel', style: ObjectText.action),
-                  ),
-                ),
-                _Labelled(
-                  editing: widget.editing,
-                  labels: const ('Share', null),
-                  onTap: () => widget.onAction(BarAction.secondary),
-                  child: _CrossFade(
-                    key: _keys[BarAction.secondary],
-                    t: widget.editing,
-                    from: const Text('Share', style: ObjectText.actionQuiet),
-                    to: const Text('·', style: ObjectText.actionQuiet),
-                  ),
-                ),
-                _Labelled(
-                  editing: widget.editing,
-                  labels: const ('Mark replaced today', 'Save'),
-                  onTap: () => widget.onAction(BarAction.pill),
-                  child: _Pill(
-                    key: _keys[BarAction.pill],
+                // Every label yields. None was flexible before, so at 320pt
+                // the three of them overflowed the row outright.
+                Flexible(
+                  child: _Labelled(
                     editing: widget.editing,
-                    press: widget.pillPress,
-                    ring: widget.ring,
+                    labels: const ('Edit', 'Cancel'),
+                    onTap: () => widget.onAction(BarAction.primary),
+                    child: _CrossFade(
+                      key: _keys[BarAction.primary],
+                      t: widget.editing,
+                      from: const Text(
+                        'Edit',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: ObjectText.action,
+                      ),
+                      to: const Text(
+                        'Cancel',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: ObjectText.action,
+                      ),
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: _Labelled(
+                    editing: widget.editing,
+                    labels: const ('Share', null),
+                    onTap: () => widget.onAction(BarAction.secondary),
+                    child: _CrossFade(
+                      key: _keys[BarAction.secondary],
+                      t: widget.editing,
+                      from: const Text(
+                        'Share',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: ObjectText.actionQuiet,
+                      ),
+                      to: const Text(
+                        '·',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: ObjectText.actionQuiet,
+                      ),
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: _Labelled(
+                    editing: widget.editing,
+                    labels: const ('Mark replaced today', 'Save'),
+                    onTap: () => widget.onAction(BarAction.pill),
+                    child: _Pill(
+                      key: _keys[BarAction.pill],
+                      editing: widget.editing,
+                      press: widget.pillPress,
+                      ring: widget.ring,
+                    ),
                   ),
                 ),
               ],

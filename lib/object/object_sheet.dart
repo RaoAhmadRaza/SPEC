@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:spec/home/home_glass.dart';
 import 'package:spec/object/object_icons.dart';
 import 'package:spec/object/object_tokens.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 const _riseDuration = Duration(milliseconds: 320);
@@ -154,7 +155,13 @@ class _ObjectSheetState extends State<_ObjectSheet> {
         MediaQuery.sizeOf(context).height - ObjectMetrics.page.top;
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: maxHeight),
+      constraints: BoxConstraints(
+        maxHeight: maxHeight,
+        // Otherwise the ••• menu is a 1280pt-wide strip on a landscape iPad.
+        maxWidth: SpecLayout.isExpanded(context)
+            ? SpecLayout.maxContentWidth
+            : double.infinity,
+      ),
       child: GlassSurface(
         borderRadius: _sheetRadius,
         blur: _sheetBlur,

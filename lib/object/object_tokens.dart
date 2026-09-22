@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 /// Screen 03's own surfaces, lifted from `SPEC Screens.dc.html`.
@@ -194,6 +195,15 @@ abstract final class ObjectMetrics {
   static const photoRowHeight = 158.0;
   static const photoGap = 9.0;
 
+  /// The photo pair's shape rather than its height: 358pt across and 158pt
+  /// tall at the reference canvas, so this reproduces 158 exactly there and
+  /// stops the main photo becoming a letterbox on a tablet.
+  static const photoPairRatio = 358 / photoRowHeight;
+
+  /// Past this the 108pt spec, the table and the bar all stretch the full
+  /// width of an iPad. The body is capped here and centred instead.
+  static const maxContentWidth = SpecLayout.maxContentWidth;
+
   /// Three corners at 20 and one cut to 6. The two cuts face each other
   /// across the gap.
   static const mainPhotoRadius = BorderRadius.only(
@@ -209,6 +219,8 @@ abstract final class ObjectMetrics {
     bottomLeft: Radius.circular(20),
   );
 
+  /// The bar's designed height. [objectBarHeight] is what anything laying
+  /// out against it should read.
   static const barHeight = 62.0;
 
   /// The gap metadata row two opens under itself to clear the bar.
@@ -217,3 +229,16 @@ abstract final class ObjectMetrics {
   /// A spec shrinks to fit rather than wrapping, but never below this.
   static const specFloor = 56.0;
 }
+
+/// The action bar's height at the current text scale.
+///
+/// The bar itself and the screen's reserved [ObjectMetrics.barHeight] band
+/// both read this one function, so a bar that grows can never end up sitting
+/// over content the screen thought it had cleared. At scale 1.0 it is exactly
+/// the 62pt design value.
+double objectBarHeight(BuildContext context) => MediaQuery.textScalerOf(context)
+    .scale(ObjectMetrics.barHeight)
+    .clamp(
+      ObjectMetrics.barHeight,
+      ObjectMetrics.barHeight * SpecLayout.maxTextScale,
+    );

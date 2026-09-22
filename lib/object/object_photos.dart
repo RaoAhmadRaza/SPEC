@@ -84,8 +84,8 @@ class PhotoPair extends StatelessWidget {
       radius: ObjectMetrics.mainPhotoRadius,
     );
 
-    return SizedBox(
-      height: ObjectMetrics.photoRowHeight,
+    return AspectRatio(
+      aspectRatio: ObjectMetrics.photoPairRatio,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

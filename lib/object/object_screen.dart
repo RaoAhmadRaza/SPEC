@@ -19,6 +19,7 @@ import 'package:spec/object/object_sheet.dart';
 import 'package:spec/object/object_table.dart';
 import 'package:spec/object/object_tokens.dart';
 import 'package:spec/object/object_viewer.dart';
+import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
 const _enterDuration = Duration(milliseconds: 520);
@@ -508,7 +509,11 @@ class _ObjectScreenState extends State<ObjectScreen>
   Widget build(BuildContext context) {
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     const page = ObjectMetrics.page;
-    final barArea = page.bottom + ObjectMetrics.barHeight;
+    final pageTop = SpecLayout.topInset(context, design: page.top);
+    final pageBottom = SpecLayout.bottomInset(context, design: page.bottom);
+    // Reserved from the same function the bar sizes itself with, so a bar
+    // that grows with the text scale can never cover the last row.
+    final barArea = pageBottom + objectBarHeight(context);
 
     return DefaultTextStyle(
       style: const TextStyle(
@@ -520,13 +525,21 @@ class _ObjectScreenState extends State<ObjectScreen>
         color: SpecColors.bg,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final contentWidth = constraints.maxWidth - page.horizontal;
+            final available = constraints.maxWidth - page.horizontal;
+            // Capped and centred: a 108pt spec and a metadata table spread
+            // across 1280pt are unreadable. `contentWidth` already feeds
+            // `fitSpecStyle`, so the spec sizes against the cap for free.
+            final contentWidth = math.min(
+              available,
+              ObjectMetrics.maxContentWidth,
+            );
+            final side = page.left + (available - contentWidth) / 2;
             // The bar floats over the column's foot. When the object fits, the
             // spacer parks the metadata right above it; when it does not, the
             // page scrolls under it and the bar stays pinned.
             final minHeight = math.max(
               0.0,
-              constraints.maxHeight - page.top - barArea,
+              constraints.maxHeight - pageTop - barArea,
             );
 
             return Stack(
@@ -538,12 +551,7 @@ class _ObjectScreenState extends State<ObjectScreen>
                 Padding(
                   padding: EdgeInsets.only(bottom: keyboard),
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                      page.left,
-                      page.top,
-                      page.right,
-                      barArea,
-                    ),
+                    padding: EdgeInsets.fromLTRB(side, pageTop, side, barArea),
                     child: BodyWithFoot(
                       minHeight: minHeight,
                       gap: ObjectMetrics.gap,
@@ -556,9 +564,9 @@ class _ObjectScreenState extends State<ObjectScreen>
                 // out by the 2pt difference, so the visuals sit exactly where
                 // the design puts them and no target is clipped by the column.
                 Positioned(
-                  left: page.left - _hitInset,
-                  right: page.right - _hitInset,
-                  top: page.top - _hitInset,
+                  left: side - _hitInset,
+                  right: side - _hitInset,
+                  top: pageTop - _hitInset,
                   child: _in(
                     _header,
                     Row(
@@ -572,11 +580,11 @@ class _ObjectScreenState extends State<ObjectScreen>
                   ),
                 ),
                 Positioned(
-                  left: page.left,
-                  right: page.right,
+                  left: side,
+                  right: side,
                   // Tracks the keyboard with no curve of its own: the keyboard
                   // is already animating, and a second curve would lag it.
-                  bottom: page.bottom + keyboard,
+                  bottom: pageBottom + keyboard,
                   child: _in(
                     _bar,
                     ObjectActionBar(
