@@ -73,44 +73,55 @@ class HomeWordmark extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('SPEC', style: HomeText.wordmark),
-            const SizedBox(width: 3),
-            // The trademark hangs from the cap line, not the baseline.
-            const Padding(
-              padding: EdgeInsets.only(top: 6),
-              child: Text('™', style: HomeText.trademark),
-            ),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < _lines.length; i++) ...[
-                if (i > 0) const SizedBox(height: 5),
-                wrapLine(
-                  i,
-                  Text(
-                    _lines[i],
-                    style: i == _lines.length - 1
-                        ? HomeText.sideColumnAccent
-                        : HomeText.sideColumn,
-                  ),
+        // Both sides are flexible so neither can push the other off the row.
+        // `scaleDown` only ever shrinks, so the 72pt token is untouched
+        // wherever it already fits.
+        const Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('SPEC', style: HomeText.wordmark),
+                SizedBox(width: 3),
+                // The trademark hangs from the cap line, not the baseline.
+                Padding(
+                  padding: EdgeInsets.only(top: 6),
+                  child: Text('™', style: HomeText.trademark),
                 ),
               ],
-              const SizedBox(height: 8),
-              const SizedBox(
-                width: 22,
-                height: 1,
-                child: ColoredBox(color: HomeColors.sideRule),
-              ),
-            ],
+            ),
+          ),
+        ),
+        Flexible(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < _lines.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 5),
+                  wrapLine(
+                    i,
+                    Text(
+                      _lines[i],
+                      style: i == _lines.length - 1
+                          ? HomeText.sideColumnAccent
+                          : HomeText.sideColumn,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                const SizedBox(
+                  width: 22,
+                  height: 1,
+                  child: ColoredBox(color: HomeColors.sideRule),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -297,7 +308,16 @@ class HomeSectionRule extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: HomeText.sectionRule),
+        // The label yields rather than pushing SEE ALL off the row: the
+        // action has to stay reachable at any text scale.
+        Flexible(
+          child: Text(
+            label,
+            style: HomeText.sectionRule,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         if (showSeeAll)
           GestureDetector(
             onTap: onSeeAll,
