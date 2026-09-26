@@ -4,40 +4,36 @@ import 'package:flutter/widgets.dart';
 
 import 'package:spec/collections/collections_tokens.dart';
 import 'package:spec/object/object_parts.dart';
+import 'package:spec/search/search_models.dart';
+import 'package:spec/settings/settings_icons.dart';
 import 'package:spec/settings/settings_parts.dart';
 import 'package:spec/settings/settings_tokens.dart';
-
 import 'package:spec/theme/spec_layout.dart';
 import 'package:spec/theme/spec_tokens.dart';
 
-/// Collections' page geometry, so the two data screens share a margin.
-const _side = 18.0;
+/// Measured off the design at its 402 × 874 canvas.
+const _side = 22.0;
 const _top = 56.0;
-const _bottom = 44.0;
-const _blockGap = 20.0;
-const _titleGap = 12.0;
-const _lineGap = 10.0;
+const _bottom = 34.0;
+const _titleTop = 19.0;
+const _ruleAbove = 16.5;
+const _ruleBelow = 11.0;
+const _cardGap = 9.0;
+const _actionsAbove = 10.0;
+const _aboutAbove = 16.5;
+const _aboutGap = 12.0;
+const _statusGap = 12.0;
 
-/// Tight enough to read as one list of actions, with each chip's 44pt touch
-/// target doing the spacing.
-const _chipGap = 4.0;
-
-/// Holds one line of status even while empty, so a result arriving does not
-/// shove the footer down.
-const _statusMinHeight = 22.0;
+/// A pill's hit area reaches 3pt past its outline, above and below. Every gap
+/// that meets a pill gives those 3pt back so the drawn spacing still matches.
+const _pillSlop = 3.0;
+const _pillGap = 9.5 - _pillSlop * 2;
 
 const _enterDuration = Duration(milliseconds: 560);
 const _busyFade = Duration(milliseconds: 160);
 
 /// Actions stay visible while one runs, but read as unavailable.
 const _busyOpacity = 0.4;
-
-const _privacyLines = [
-  'NO ACCOUNT',
-  'NO CLOUD',
-  'STAYS ON THIS PHONE',
-  'NO TRACKING',
-];
 
 /// Screen 5: what SPEC holds, where it lives, and the three ways to take it
 /// out, bring it back, or wipe it.
@@ -49,6 +45,7 @@ class SettingsScreen extends StatefulWidget {
     super.key,
     required this.version,
     required this.counts,
+    required this.storage,
     required this.status,
     required this.isBusy,
     required this.onBack,
@@ -57,11 +54,14 @@ class SettingsScreen extends StatefulWidget {
     required this.onDeleteEverything,
   });
 
-  /// `SPEC 1.0.1 (2)`.
+  /// `SPEC 1.0.2 (3)`.
   final String version;
 
-  /// `41 OBJECTS · 96 PHOTOS`.
-  final String counts;
+  /// What the title line and the two count cards read.
+  final ArchiveCounts counts;
+
+  /// `2.1 MB`, or null while it is still being weighed.
+  final String? storage;
 
   /// The last action's result or failure; null shows nothing.
   final String? status;
@@ -137,83 +137,55 @@ class _SettingsScreenState extends State<SettingsScreen>
       ),
       child: ColoredBox(
         color: SpecColors.bg,
-        // Scrolls only when it must: large text, or a long format error.
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              // The bottom inset is not here: `SliverFillRemaining` fills the
-              // remaining *paint* extent, which `SliverPadding` reduces by its
-              // leading padding only. A trailing padding here is counted in
-              // the scroll extent but the child still paints to the viewport's
-              // bottom edge, which put the version line under the home
-              // indicator. It goes inside the sliver instead.
-              padding: EdgeInsets.fromLTRB(
-                _side,
-                SpecLayout.topInset(context, design: _top),
-                _side,
-                0,
-              ),
-              // No LayoutBuilder in here: this sliver measures its child's
-              // intrinsic height, and a LayoutBuilder cannot report one.
-              sliver: SliverFillRemaining(
-                hasScrollBody: false,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom: SpecLayout.bottomInset(context, design: _bottom),
-                  ),
-                  child: Center(
-                    child: SizedBox(
-                      width: _contentWidth(context),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _rise(0, 0.3, GlassCircle.back(onTap: widget.onBack)),
-                          const SizedBox(height: _blockGap),
-                          _rise(0.06, 0.5, _buildTitle(), dy: 20),
-                          const SizedBox(height: _blockGap),
-                          _rise(
-                            0.2,
-                            0.52,
-                            const SettingsRule(
-                              color: CollectionsColors.ruleStrong,
-                            ),
-                          ),
-                          const SizedBox(height: _blockGap),
-                          _rise(0.26, 0.64, _buildPrivacy(), dy: 12),
-                          const SizedBox(height: _blockGap),
-                          _rise(
-                            0.34,
-                            0.66,
-                            const SettingsRule(
-                              color: CollectionsColors.hairline,
-                            ),
-                          ),
-                          const SizedBox(height: _blockGap),
-                          _rise(0.4, 0.8, _buildActions(), dy: 12),
-                          const SizedBox(height: _blockGap),
-                          _buildStatus(),
-                          const Spacer(),
-                          const SizedBox(height: _blockGap),
-                          _rise(
-                            0.5,
-                            1,
-                            Text(widget.version, style: SettingsText.version),
-                          ),
-                        ],
-                      ),
+        // Scrolls only when it must: a short phone, large text, or a long
+        // format error.
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            _side,
+            SpecLayout.topInset(context, design: _top),
+            _side,
+            SpecLayout.bottomInset(context, design: _bottom),
+          ),
+          child: Center(
+            child: SizedBox(
+              width: _contentWidth(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _rise(
+                    0,
+                    0.3,
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: GlassCircle.back(onTap: widget.onBack),
                     ),
                   ),
-                ),
+                  const SizedBox(height: _titleTop),
+                  _rise(0.06, 0.5, _buildTitle(), dy: 20),
+                  const SizedBox(height: _ruleAbove),
+                  _rise(0.2, 0.52, const _Rule()),
+                  const SizedBox(height: _ruleBelow),
+                  _rise(0.26, 0.7, _buildCards(), dy: 12),
+                  const SizedBox(height: _actionsAbove),
+                  _rise(0.34, 0.74, const _Rule()),
+                  const SizedBox(height: _aboutGap - _pillSlop),
+                  _rise(0.4, 0.8, _buildActions(), dy: 12),
+                  _buildStatus(),
+                  const SizedBox(height: _aboutAbove - _pillSlop),
+                  _rise(0.46, 0.86, const _Rule()),
+                  const SizedBox(height: _aboutGap),
+                  _rise(0.5, 1, _buildAbout(), dy: 12),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  /// The column's width, capped so a 54pt title and a privacy paragraph do
-  /// not run the full width of an iPad.
+  /// The column's width, capped so a 54pt title and full-width cards do not
+  /// run the full width of an iPad.
   double _contentWidth(BuildContext context) => math.min(
     MediaQuery.sizeOf(context).width - _side * 2,
     SpecLayout.maxContentWidth,
@@ -223,10 +195,17 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('SETTINGS', style: SettingsText.title, maxLines: 1),
-        const SizedBox(height: _titleGap),
+        // No gap: the design sets the counts tight under the title's
+        // baseline, closer than the title's own line box allows.
+        // Shrinks rather than clips on a narrow phone at a raised text
+        // scale; scaleDown leaves it untouched everywhere it already fits.
+        const FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text('SETTINGS', style: SettingsText.title, maxLines: 1),
+        ),
         Text(
-          widget.counts,
+          widget.counts.label,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: SettingsText.counts,
@@ -235,74 +214,126 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildPrivacy() {
+  /// Backup is the one card that does something: it exports, like the lime
+  /// pill below it. The rest only report.
+  Widget _buildCards() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final line in _privacyLines)
-          Text(line, style: SettingsText.privacy),
-        const SizedBox(height: _lineGap),
-        const Text(
-          'Everything you save lives only in SPEC on this phone. A backup is '
-          'a file you keep.',
-          maxLines: 4,
-          overflow: TextOverflow.ellipsis,
-          style: SettingsText.body,
+        _busyGate(
+          SettingsCard(
+            glyph: SettingsGlyph.cloud,
+            label: 'BACKUP',
+            value: 'OFF',
+            valueStyle: SettingsText.rowState,
+            detail: 'Keep your specs safe.\nA backup is a file you keep.',
+            onTap: widget.onExport,
+          ),
+        ),
+        const SizedBox(height: _cardGap),
+        SettingsCard(
+          glyph: SettingsGlyph.phone,
+          label: 'ON THIS PHONE',
+          value: '${widget.counts.objects}',
+          detail: 'Objects saved in SPEC\non this device.',
+        ),
+        const SizedBox(height: _cardGap),
+        SettingsCard(
+          glyph: SettingsGlyph.photo,
+          label: 'PHOTOS',
+          value: '${widget.counts.photos}',
+          detail: 'Reference photos for\nyour objects.',
+        ),
+        const SizedBox(height: _cardGap),
+        SettingsCard(
+          glyph: SettingsGlyph.storage,
+          label: 'STORAGE',
+          value: widget.storage,
+          detail: 'Space used by SPEC\non this device.',
         ),
       ],
     );
   }
 
   Widget _buildActions() {
+    return _busyGate(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SettingsPill(
+            glyph: SettingsGlyph.share,
+            label: 'EXPORT BACKUP',
+            tone: SettingsPillTone.accent,
+            onTap: widget.onExport,
+          ),
+          const SizedBox(height: _pillGap),
+          SettingsPill(
+            glyph: SettingsGlyph.share,
+            label: 'RESTORE FROM BACKUP',
+            tone: SettingsPillTone.plain,
+            onTap: widget.onRestore,
+          ),
+          const SizedBox(height: _pillGap),
+          SettingsPill(
+            glyph: SettingsGlyph.trash,
+            label: 'DELETE EVERYTHING',
+            tone: SettingsPillTone.destructive,
+            onTap: widget.onDeleteEverything,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Visible while an action runs, but unavailable and reading that way.
+  Widget _busyGate(Widget child) {
     return IgnorePointer(
       ignoring: widget.isBusy,
       child: AnimatedOpacity(
         opacity: widget.isBusy ? _busyOpacity : 1,
         duration: _isMotionReduced ? Duration.zero : _busyFade,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SettingsChip(
-              label: 'EXPORT BACKUP',
-              tone: SettingsChipTone.accent,
-              onTap: widget.onExport,
-            ),
-            const SizedBox(height: _chipGap),
-            SettingsChip(
-              label: 'RESTORE FROM BACKUP',
-              tone: SettingsChipTone.plain,
-              onTap: widget.onRestore,
-            ),
-            const SizedBox(height: _chipGap),
-            SettingsChip(
-              label: 'DELETE EVERYTHING',
-              tone: SettingsChipTone.destructive,
-              onTap: widget.onDeleteEverything,
-            ),
-          ],
-        ),
+        child: child,
       ),
     );
   }
 
+  /// Takes no room until there is something to say, so the page matches the
+  /// design until an action answers.
   Widget _buildStatus() {
     final status = widget.status;
     return Semantics(
       // Read out when it changes: it is the only answer an action gives.
       liveRegion: true,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: _statusMinHeight),
-        child: status == null
-            ? const SizedBox(width: double.infinity)
-            // Two lines, not one: this is a live region, so truncating it
-            // loses the only answer an action gives.
-            : Text(
+      child: status == null
+          ? const SizedBox.shrink()
+          : Padding(
+              padding: const EdgeInsets.only(top: _statusGap),
+              // Two lines, not one: this is a live region, so truncating it
+              // loses the only answer an action gives.
+              child: Text(
                 status,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: SettingsText.status,
               ),
-      ),
+            ),
     );
   }
+
+  Widget _buildAbout() {
+    return SettingsCard(
+      glyph: SettingsGlyph.info,
+      label: 'ABOUT',
+      detail: widget.version,
+      detailStyle: SettingsText.rowVersion,
+    );
+  }
+}
+
+class _Rule extends StatelessWidget {
+  const _Rule();
+
+  @override
+  Widget build(BuildContext context) =>
+      const SettingsRule(color: CollectionsColors.ruleStrong);
 }

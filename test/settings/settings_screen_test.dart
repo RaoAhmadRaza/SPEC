@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spec/object/object_parts.dart';
+import 'package:spec/search/search_models.dart';
 import 'package:spec/settings/settings_parts.dart';
 import 'package:spec/settings/settings_screen.dart';
 import 'package:spec/theme/spec_layout.dart';
@@ -9,6 +10,7 @@ import '../support/fonts.dart';
 import '../support/responsive.dart';
 
 const _canvas = Size(402, 874);
+const _counts = ArchiveCounts(objects: 41, photos: 96);
 
 /// Counts each callback so a test can say which ran, and how often.
 class _Taps {
@@ -37,7 +39,8 @@ Future<_Taps> _pump(
         textDirection: TextDirection.ltr,
         child: SettingsScreen(
           version: 'SPEC 1.0.0 (1)',
-          counts: '41 OBJECTS · 96 PHOTOS',
+          counts: _counts,
+          storage: '2.1 MB',
           status: status,
           isBusy: isBusy,
           onBack: () => taps.back++,
@@ -65,7 +68,8 @@ Future<void> _pumpResponsiveSettings(
     tester,
     SettingsScreen(
       version: 'SPEC 1.0.0 (1)',
-      counts: '41 OBJECTS · 96 PHOTOS',
+      counts: _counts,
+      storage: '2.1 MB',
       status: status,
       isBusy: false,
       onBack: () {},
@@ -85,7 +89,7 @@ Future<void> _pumpResponsiveSettings(
 ScrollPosition _pageScroll(WidgetTester tester) =>
     tester.state<ScrollableState>(find.byType(Scrollable).first).position;
 
-const _chipLabels = [
+const _pillLabels = [
   'EXPORT BACKUP',
   'RESTORE FROM BACKUP',
   'DELETE EVERYTHING',
@@ -110,18 +114,26 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('version text stays pinned to the bottom when content fits', (
-      tester,
-    ) async {
+    testWidgets('matches the design at the reference canvas', (tester) async {
       // Arrange / Act
       await _pumpResponsiveSettings(tester, canvas: specReferenceCanvas);
 
-      // Assert: the Spacer still does its job — the version sits just above
-      // the 44pt bottom padding rather than following the content up.
+      // Assert: cards and pills share the 22pt margin and fill the column,
+      // and the page fits without scrolling.
+      const width = 402.0 - 22 * 2;
+      for (final card in tester.widgetList(find.byType(SettingsCard))) {
+        final rect = tester.getRect(find.byWidget(card));
+        expect(rect.left, 22.0);
+        expect(rect.width, width);
+      }
+      expect(_pageScroll(tester).maxScrollExtent, 0.0);
       expect(
-        specReferenceCanvas.height -
-            tester.getRect(find.text('SPEC 1.0.0 (1)')).bottom,
-        closeTo(44.0, 2.0),
+        tester.getRect(find.widgetWithText(SettingsCard, 'BACKUP')).height,
+        closeTo(74.0, 1.5),
+      );
+      expect(
+        tester.getRect(find.widgetWithText(SettingsCard, 'ABOUT')).height,
+        closeTo(57.0, 1.5),
       );
     });
 
@@ -138,20 +150,55 @@ void main() {
       expect(_pageScroll(tester).maxScrollExtent, greaterThan(0.0));
     });
 
-    testWidgets('action chips are left-aligned to the page margin', (
+    testWidgets('cards carry no chevron and centre their reading', (
       tester,
     ) async {
       // Arrange / Act
       await _pumpResponsiveSettings(tester, canvas: specReferenceCanvas);
 
-      // Assert: the TapTarget used to expand to the full row and centre its
-      // pill, so the chips were not flush with the 18pt margin.
-      for (final label in _chipLabels) {
-        expect(
-          tester.getRect(find.widgetWithText(SettingsChip, label)).left,
-          closeTo(18.0, 0.01),
-          reason: label,
-        );
+      // Assert: back is the only circle, and chevrons belong to the three
+      // pills only.
+      expect(find.byType(GlassCircle), findsOneWidget);
+      expect(find.byType(SettingsChevron), findsNWidgets(3));
+      for (final (label, value) in [
+        ('BACKUP', 'OFF'),
+        ('ON THIS PHONE', '41'),
+        ('PHOTOS', '96'),
+        ('STORAGE', '2.1 MB'),
+      ]) {
+        final card = tester.getRect(find.widgetWithText(SettingsCard, label));
+        final reading = tester.getRect(find.text(value));
+        expect(reading.center.dy, closeTo(card.center.dy, 0.5), reason: label);
+        expect(card.right - reading.right, 17.0, reason: label);
+      }
+    });
+
+    testWidgets('title shrinks rather than clips on a tiny screen at 1.5', (
+      tester,
+    ) async {
+      // Arrange / Act
+      await _pumpResponsiveSettings(
+        tester,
+        canvas: specCanvases['tiny']!,
+        textScale: 1.5,
+      );
+
+      // Assert
+      final title = tester.getRect(find.byType(FittedBox).first);
+      expect(title.right, lessThanOrEqualTo(320.0 - 22));
+      expectNoOverflow(tester);
+    });
+
+    testWidgets('action pills span the content column', (tester) async {
+      // Arrange / Act
+      await _pumpResponsiveSettings(tester, canvas: specReferenceCanvas);
+
+      // Assert: 38pt drawn, 44pt of touch target.
+      for (final label in _pillLabels) {
+        final pill = tester.getRect(find.widgetWithText(SettingsPill, label));
+        expect(pill.left, 22.0, reason: label);
+        expect(pill.width, 402.0 - 22 * 2, reason: label);
+        expect(pill.height, 44.0, reason: label);
       }
     });
 
@@ -209,7 +256,7 @@ void main() {
     });
   });
 
-  testWidgets('shows title, counts, privacy, actions and version', (
+  testWidgets('shows title, counts, cards, actions and version', (
     tester,
   ) async {
     // Arrange / Act
@@ -220,10 +267,15 @@ void main() {
     for (final text in [
       'SETTINGS',
       '41 OBJECTS · 96 PHOTOS',
-      'NO ACCOUNT',
-      'NO CLOUD',
-      'STAYS ON THIS PHONE',
-      'NO TRACKING',
+      'BACKUP',
+      'OFF',
+      'ON THIS PHONE',
+      '41',
+      'PHOTOS',
+      '96',
+      'STORAGE',
+      '2.1 MB',
+      'ABOUT',
       'EXPORT BACKUP',
       'RESTORE FROM BACKUP',
       'DELETE EVERYTHING',
@@ -260,9 +312,10 @@ void main() {
     await tester.tap(find.text('RESTORE FROM BACKUP'));
     await tester.tap(find.text('DELETE EVERYTHING'));
     await tester.tap(find.bySemanticsLabel('Back'));
+    await tester.tap(find.text('BACKUP'));
 
-    // Assert
-    expect([taps.export, taps.restore, taps.delete, taps.back], [1, 1, 1, 1]);
+    // Assert: the Backup card exports too.
+    expect([taps.export, taps.restore, taps.delete, taps.back], [2, 1, 1, 1]);
   });
 
   testWidgets('actions ignore taps while busy', (tester) async {
@@ -271,11 +324,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Act
-    for (final label in [
-      'EXPORT BACKUP',
-      'RESTORE FROM BACKUP',
-      'DELETE EVERYTHING',
-    ]) {
+    for (final label in [..._pillLabels, 'BACKUP']) {
       await tester.tap(find.text(label), warnIfMissed: false);
     }
 

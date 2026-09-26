@@ -9,8 +9,10 @@ import 'package:spec/object/object_sheet.dart';
 import 'package:spec/providers/app_info.dart';
 import 'package:spec/providers/backup.dart';
 import 'package:spec/providers/search.dart';
+import 'package:spec/providers/storage.dart';
 import 'package:spec/search/search_models.dart';
 import 'package:spec/settings/settings_screen.dart';
+import 'package:spec/settings/storage_size.dart';
 
 const _exportFailed = 'COULD NOT MAKE A BACKUP. TRY AGAIN.';
 const _restoreFailed = 'COULD NOT RESTORE THAT BACKUP. NOTHING CHANGED.';
@@ -37,15 +39,17 @@ class _SettingsRouteState extends ConsumerState<SettingsRoute> {
 
   @override
   Widget build(BuildContext context) {
-    // No spinner: both resolve within a frame, and a blank line is honest
+    // No spinner: these resolve within a frame, and a blank line is honest
     // for the instant before they do.
     final version = ref.watch(appVersionProvider).value ?? '';
     final counts =
         ref.watch(archiveCountsProvider).value ?? ArchiveCounts.empty;
+    final storage = ref.watch(storageBytesProvider).value;
 
     return SettingsScreen(
       version: version,
-      counts: counts.label,
+      counts: counts,
+      storage: storage == null ? null : storageLabel(storage),
       status: _status,
       isBusy: _isBusy,
       onBack: () => unawaited(Navigator.of(context).maybePop()),

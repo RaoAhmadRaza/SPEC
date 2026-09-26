@@ -7,6 +7,7 @@ import 'package:spec/data/backup_service.dart';
 import 'package:spec/providers/app_info.dart';
 import 'package:spec/providers/backup.dart';
 import 'package:spec/providers/search.dart';
+import 'package:spec/providers/storage.dart';
 import 'package:spec/search/search_models.dart';
 import 'package:spec/settings/settings_route.dart';
 
@@ -73,6 +74,7 @@ Future<void> _pump(WidgetTester tester, FakeBackupActions fake) async {
       overrides: [
         backupActionsProvider.overrideWith(() => fake),
         appVersionProvider.overrideWith((ref) async => 'SPEC 1.0.0 (1)'),
+        storageBytesProvider.overrideWith((ref) async => 2100000),
         archiveCountsProvider.overrideWith(
           (ref) => Stream.value(const ArchiveCounts(objects: 41, photos: 96)),
         ),
@@ -86,7 +88,7 @@ Future<void> _pump(WidgetTester tester, FakeBackupActions fake) async {
 void main() {
   setUpAll(loadSpecFonts);
 
-  testWidgets('shows the archive counts and version from providers', (
+  testWidgets('shows the archive counts, storage and version from providers', (
     tester,
   ) async {
     // Arrange / Act
@@ -94,6 +96,7 @@ void main() {
 
     // Assert
     expect(find.text('41 OBJECTS · 96 PHOTOS'), findsOneWidget);
+    expect(find.text('2.1 MB'), findsOneWidget);
     expect(find.text('SPEC 1.0.0 (1)'), findsOneWidget);
   });
 
