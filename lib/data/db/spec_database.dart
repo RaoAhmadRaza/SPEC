@@ -38,8 +38,11 @@ class SpecDatabase extends _$SpecDatabase {
 /// Documents, not cache: iOS purges cache under storage pressure and this is
 /// not a cache. Deliberately not `drift_flutter`, which still depends on two
 /// packages whose own descriptions say they are no longer used.
-Future<SpecDatabase> openSpecDatabase() async {
+Future<SpecDatabase> openSpecDatabase() async =>
+    SpecDatabase(NativeDatabase.createInBackground(await specDatabaseFile()));
+
+/// Where [openSpecDatabase] keeps the database, so Settings can weigh it.
+Future<File> specDatabaseFile() async {
   final directory = await getApplicationDocumentsDirectory();
-  final file = File(p.join(directory.path, 'spec.sqlite'));
-  return SpecDatabase(NativeDatabase.createInBackground(file));
+  return File(p.join(directory.path, 'spec.sqlite'));
 }

@@ -20,6 +20,9 @@ class PhotoStore {
     return PhotoStore(directory);
   }
 
+  /// The folder every photo lives in, so Settings can weigh it.
+  Directory get directory => _directory;
+
   File resolve(String fileName) => File(p.join(_directory.path, fileName));
 
   /// Copies [source] in and returns the file name to store on the row.
