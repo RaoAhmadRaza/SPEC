@@ -42,7 +42,13 @@ class ShineButton extends StatelessWidget {
       onTap: onPressed,
       behavior: HitTestBehavior.opaque,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: _minButtonHeight),
+        // Full width of its slot, as the design has it. Without the width
+        // floor the Stack below sizes to the label and the button
+        // shrink-wraps inside a start-aligned column.
+        constraints: const BoxConstraints(
+          minWidth: double.infinity,
+          minHeight: _minButtonHeight,
+        ),
         child: DecoratedBox(
           decoration: const BoxDecoration(
             color: SpecColors.accent,

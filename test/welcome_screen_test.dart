@@ -148,6 +148,16 @@ void main() {
     );
   });
 
+  testWidgets('GET STARTED spans the content column', (tester) async {
+    // Arrange / Act
+    await _pumpResponsiveWelcome(tester, canvas: specReferenceCanvas);
+
+    // Assert: 18pt gutter each side of the 402pt reference canvas.
+    final button = tester.getRect(find.byType(ShineButton));
+    expect(button.left, 18.0);
+    expect(button.width, specReferenceCanvas.width - 36);
+  });
+
   testWidgets('ShineButton label does not clip at scale 1.5', (tester) async {
     // Arrange / Act
     await pumpResponsive(
