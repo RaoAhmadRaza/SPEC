@@ -54,7 +54,7 @@ class SettingsScreen extends StatefulWidget {
     required this.onDeleteEverything,
   });
 
-  /// `SPEC 1.0.2 (3)`.
+  /// `SPEC 1.0.3 (4)`.
   final String version;
 
   /// What the title line and the two count cards read.

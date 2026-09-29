@@ -55,7 +55,7 @@ abstract final class SettingsText {
     color: SpecColors.ink62,
   );
 
-  /// `SPEC 1.0.2 (3)` under `ABOUT`.
+  /// `SPEC 1.0.3 (4)` under `ABOUT`.
   static const rowVersion = TextStyle(
     fontFamily: SpecFonts.mono,
     fontSize: 10,
