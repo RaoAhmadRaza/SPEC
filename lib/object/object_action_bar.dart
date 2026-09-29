@@ -11,6 +11,7 @@ const _pillPadding = EdgeInsets.symmetric(horizontal: 20, vertical: 14);
 const _ringStroke = 1.5;
 const _ringGrowth = 0.6;
 const _ringOpacity = 0.5;
+const _pillFlex = 2;
 
 /// Which action a tap in the bar landed on.
 enum BarAction { primary, secondary, pill }
@@ -91,73 +92,80 @@ class _ObjectActionBarState extends State<ObjectActionBar> {
               ],
             ),
           ),
-          Padding(
-            padding: _barPadding,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Every label yields. None was flexible before, so at 320pt
-                // the three of them overflowed the row outright.
-                Flexible(
-                  child: _Labelled(
-                    editing: widget.editing,
-                    labels: const ('Edit', 'Cancel'),
-                    onTap: () => widget.onAction(BarAction.primary),
-                    child: _CrossFade(
-                      key: _keys[BarAction.primary],
-                      t: widget.editing,
-                      from: const Text(
-                        'Edit',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: ObjectText.action,
-                      ),
-                      to: const Text(
-                        'Cancel',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: ObjectText.action,
-                      ),
-                    ),
-                  ),
-                ),
-                Flexible(
-                  child: _Labelled(
-                    editing: widget.editing,
-                    labels: const ('Share', null),
-                    onTap: () => widget.onAction(BarAction.secondary),
-                    child: _CrossFade(
-                      key: _keys[BarAction.secondary],
-                      t: widget.editing,
-                      from: const Text(
-                        'Share',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: ObjectText.actionQuiet,
-                      ),
-                      to: const Text(
-                        '·',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: ObjectText.actionQuiet,
-                      ),
-                    ),
-                  ),
-                ),
-                Flexible(
-                  child: _Labelled(
-                    editing: widget.editing,
-                    labels: const ('Mark replaced today', 'Save'),
-                    onTap: () => widget.onAction(BarAction.pill),
-                    child: _Pill(
-                      key: _keys[BarAction.pill],
+          // Filled, so the row is as tall as the bar and every label and the
+          // pill sit on its centre line. Loose, it hugged the top.
+          Positioned.fill(
+            child: Padding(
+              padding: _barPadding,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Every label yields. None was flexible before, so at 320pt
+                  // the three of them overflowed the row outright.
+                  Flexible(
+                    child: _Labelled(
                       editing: widget.editing,
-                      press: widget.pillPress,
-                      ring: widget.ring,
+                      labels: const ('Edit', 'Cancel'),
+                      onTap: () => widget.onAction(BarAction.primary),
+                      child: _CrossFade(
+                        key: _keys[BarAction.primary],
+                        t: widget.editing,
+                        from: const Text(
+                          'Edit',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: ObjectText.action,
+                        ),
+                        to: const Text(
+                          'Cancel',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: ObjectText.action,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  Flexible(
+                    child: _Labelled(
+                      editing: widget.editing,
+                      labels: const ('Share', null),
+                      onTap: () => widget.onAction(BarAction.secondary),
+                      child: _CrossFade(
+                        key: _keys[BarAction.secondary],
+                        t: widget.editing,
+                        from: const Text(
+                          'Share',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: ObjectText.actionQuiet,
+                        ),
+                        to: const Text(
+                          '·',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: ObjectText.actionQuiet,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Twice the share of a label: a third of the row is narrower
+                  // than REPLACED, which is what wrapped it onto two lines.
+                  Flexible(
+                    flex: _pillFlex,
+                    child: _Labelled(
+                      editing: widget.editing,
+                      labels: const ('Mark replaced today', 'Save'),
+                      onTap: () => widget.onAction(BarAction.pill),
+                      child: _Pill(
+                        key: _keys[BarAction.pill],
+                        editing: widget.editing,
+                        press: widget.pillPress,
+                        ring: widget.ring,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Positioned.fill(
@@ -260,10 +268,25 @@ class _Pill extends StatelessWidget {
       ),
       child: Padding(
         padding: _pillPadding,
-        child: _CrossFade(
-          t: editing,
-          from: const Text('REPLACED', style: ObjectText.replaced),
-          to: const Text('SAVE', style: ObjectText.replaced),
+        // One line, always: where even twice a label's share is too narrow,
+        // the word shrinks rather than breaking.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: _CrossFade(
+            t: editing,
+            from: const Text(
+              'REPLACED',
+              maxLines: 1,
+              softWrap: false,
+              style: ObjectText.replaced,
+            ),
+            to: const Text(
+              'SAVE',
+              maxLines: 1,
+              softWrap: false,
+              style: ObjectText.replaced,
+            ),
+          ),
         ),
       ),
     );
