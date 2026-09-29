@@ -96,7 +96,7 @@ final class BackupActionsProvider
   }
 }
 
-String _$backupActionsHash() => r'df7f534cadfbfb558c2d57362458a70b07a0765f';
+String _$backupActionsHash() => r'07f1963c549f3c2e24e196b68baa9f48b155a220';
 
 /// The data-control actions a screen can trigger: export, restore, wipe.
 ///

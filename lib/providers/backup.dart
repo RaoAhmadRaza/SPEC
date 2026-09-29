@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -18,9 +19,23 @@ part 'backup.g.dart';
 
 /// Zip only. iOS's document picker throws without a uniform type identifier,
 /// so the UTI is not optional there.
-const _backupTypes = XTypeGroup(
+///
+/// Android filters by MIME type, and the extension alone becomes exactly
+/// `application/zip`. A backup that went through Drive, WhatsApp or some
+/// Downloads providers comes back labelled as one of the other types below,
+/// shows greyed out, and the picker can only be cancelled. `inspect`
+/// validates whatever is picked before anything is replaced, so the wider
+/// net costs nothing.
+@visibleForTesting
+const backupTypeGroup = XTypeGroup(
   label: 'SPEC backup',
   extensions: ['zip'],
+  mimeTypes: [
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/x-zip',
+    'application/octet-stream',
+  ],
   uniformTypeIdentifiers: ['public.zip-archive'],
 );
 
@@ -67,7 +82,7 @@ class BackupActions extends _$BackupActions {
 
   /// Lets the user pick a backup file. Null means they cancelled.
   Future<File?> pickBackup() async {
-    final picked = await openFile(acceptedTypeGroups: const [_backupTypes]);
+    final picked = await openFile(acceptedTypeGroups: const [backupTypeGroup]);
     return picked == null ? null : File(picked.path);
   }
 
