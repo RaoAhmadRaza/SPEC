@@ -25,10 +25,17 @@ const double _aspectAllowance = 4 / 3;
 /// list goes through this instead of a bare [FileImage]. No thumbnail files
 /// are written: the resize happens at decode, and the image cache keys on the
 /// size, so equal boxes share one decode.
-ImageProvider photoThumbnail(File file, {required double edge}) {
+ImageProvider photoThumbnail(File file, {required double edge}) =>
+    _thumbnail(FileImage(file), edge);
+
+/// A bundled library picture, decoded the same way: they are ~2MB each.
+ImageProvider assetThumbnail(String asset, {required double edge}) =>
+    _thumbnail(AssetImage(asset), edge);
+
+ImageProvider _thumbnail(ImageProvider source, double edge) {
   final pixels = (edge * _pixelRatio * _aspectAllowance).ceil();
   return ResizeImage(
-    FileImage(file),
+    source,
     width: pixels,
     height: pixels,
     policy: ResizeImagePolicy.fit,

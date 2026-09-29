@@ -2,7 +2,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:spec/data/models/spec_models.dart';
 import 'package:spec/data/zone_naming.dart';
+import 'package:spec/library/library_models.dart';
 import 'package:spec/providers/database.dart';
+import 'package:spec/providers/library.dart';
 import 'package:spec/providers/photos.dart';
 import 'package:spec/search/search_models.dart';
 import 'package:spec/search/search_query.dart';
@@ -85,11 +87,16 @@ Future<SearchQueryRunner> searchQueryRunner(
 }) async {
   ref.watch(searchArchiveProvider);
   final photos = await ref.watch(photoStoreProvider.future);
+  // Not awaited: the bundled pictures are decoration, so nothing waits on
+  // the library. This rebuilds with them once it has loaded.
+  final library =
+      ref.watch(libraryItemsProvider).value ?? const <LibraryItem>[];
   return SearchQueryRunner(
     ref.watch(searchServiceProvider),
     ref.watch(objectRepositoryProvider),
     photos,
     scope: scope,
     isListingAll: isListingAll,
+    library: library,
   );
 }

@@ -4,6 +4,7 @@ import 'package:spec/data/photo_store.dart';
 import 'package:spec/data/photo_thumbnail.dart';
 import 'package:spec/data/search_service.dart';
 import 'package:spec/data/zone_naming.dart';
+import 'package:spec/library/library_models.dart';
 import 'package:spec/search/search_models.dart';
 
 /// Turns a typed query into rows the screen can draw.
@@ -18,6 +19,7 @@ class SearchQueryRunner {
     this._photos, {
     this.scope,
     this.isListingAll = false,
+    this.library = const [],
   });
 
   final SearchService _search;
@@ -29,6 +31,9 @@ class SearchQueryRunner {
 
   /// A blank query lists the whole archive rather than nothing: SEE ALL.
   final bool isListingAll;
+
+  /// Where a library pick with no photo of its own finds its picture.
+  final List<LibraryItem> library;
 
   Future<SearchResults> run(String query) async {
     final trimmed = query.trim();
@@ -69,7 +74,10 @@ class SearchQueryRunner {
             _photos.resolve(fileName),
             edge: kPhotoEdgeSmall,
           ),
-          null => null,
+          null => switch (libraryAssetFor(row.name, library)) {
+            final String asset => assetThumbnail(asset, edge: kPhotoEdgeSmall),
+            null => null,
+          },
         },
       ),
   ];

@@ -139,3 +139,18 @@ List<WeightedText> _exactFieldsOf(LibraryItem item) => [
   (text: item.specLabel, weight: kWeightAttributes),
   (text: item.category, weight: kWeightLocation),
 ];
+
+/// The bundled picture for an object that came from the library, or null.
+///
+/// Objects keep no link to the library item they were picked from, so this
+/// matches on the name the pick gave them. Case and surrounding spaces are
+/// ignored.
+// ponytail: renaming the object drops the picture; store the library id on
+// the row if that ever matters.
+String? libraryAssetFor(String name, List<LibraryItem> items) {
+  final key = name.trim().toLowerCase();
+  for (final item in items) {
+    if (item.name.toLowerCase() == key) return item.asset;
+  }
+  return null;
+}

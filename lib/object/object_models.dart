@@ -23,6 +23,7 @@ class ObjectView {
     this.subtitle,
     this.fields = const [],
     this.mainPhoto,
+    this.isMainPhotoBundled = false,
     this.detailPhoto,
     this.lastReplaced,
     this.purchasedFrom,
@@ -53,6 +54,12 @@ class ObjectView {
   final List<SpecAttribute> fields;
 
   final ImageProvider? mainPhoto;
+
+  /// True when [mainPhoto] is the library's bundled picture standing in for
+  /// a photo the user never took. It has no file behind it, so there is
+  /// nothing to replace or remove.
+  final bool isMainPhotoBundled;
+
   final ImageProvider? detailPhoto;
 
   /// A calendar date as written, `2026-08-14`. Not a timestamp.
@@ -90,6 +97,7 @@ class ObjectView {
     subtitle: subtitle,
     fields: fields,
     mainPhoto: mainPhoto,
+    isMainPhotoBundled: isMainPhotoBundled,
     detailPhoto: detailPhoto,
     lastReplaced: lastReplaced ?? this.lastReplaced,
     purchasedFrom: purchasedFrom,

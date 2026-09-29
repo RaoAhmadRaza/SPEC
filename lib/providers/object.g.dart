@@ -74,7 +74,7 @@ final class ObjectViewProvider
   }
 }
 
-String _$objectViewHash() => r'213a441dd4bb31274e056596a8eca979993578c3';
+String _$objectViewHash() => r'bc948b88a7b655760d1d8ca4998cd0207714bc1c';
 
 /// Everything screen 03 renders for one object, live: stamping REPLACED or
 /// saving an edit rewrites the row, and the screen follows it with no manual

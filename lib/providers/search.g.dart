@@ -296,7 +296,7 @@ final class SearchQueryRunnerProvider
   }
 }
 
-String _$searchQueryRunnerHash() => r'11fa0e0183dd54a5fdf117bbe6be7a1fc9eea2c4';
+String _$searchQueryRunnerHash() => r'6309e09687f0ee527c17b300e421b40180e3c5dd';
 
 /// The runner screen 02 hands each keystroke to.
 ///

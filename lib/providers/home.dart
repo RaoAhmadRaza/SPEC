@@ -2,7 +2,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:spec/data/photo_thumbnail.dart';
 import 'package:spec/home/home_models.dart';
+import 'package:spec/library/library_models.dart';
 import 'package:spec/providers/database.dart';
+import 'package:spec/providers/library.dart';
 import 'package:spec/providers/photos.dart';
 import 'package:spec/providers/reminders.dart';
 import 'package:spec/providers/search.dart';
@@ -23,6 +25,10 @@ const _zoneIcons = <String, HomeCategoryIcon>{
 @riverpod
 Stream<List<HomeObject>> homeObjects(Ref ref) async* {
   final store = await ref.watch(photoStoreProvider.future);
+  // Not awaited: the bundled pictures are decoration, so nothing waits on
+  // the library. This rebuilds with them once it has loaded.
+  final library =
+      ref.watch(libraryItemsProvider).value ?? const <LibraryItem>[];
   final repository = ref.watch(objectRepositoryProvider);
   final database = ref.watch(specDatabaseProvider).requireValue;
 
@@ -49,7 +55,13 @@ Stream<List<HomeObject>> homeObjects(Ref ref) async* {
               store.resolve(fileName),
               edge: kPhotoEdgeLarge,
             ),
-            null => null,
+            null => switch (libraryAssetFor(row.name, library)) {
+              final String asset => assetThumbnail(
+                asset,
+                edge: kPhotoEdgeLarge,
+              ),
+              null => null,
+            },
           },
           isDue: dueIds.contains(row.id),
         ),

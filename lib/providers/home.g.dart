@@ -53,7 +53,7 @@ final class HomeObjectsProvider
   }
 }
 
-String _$homeObjectsHash() => r'39bd961f19f667fcc7ec1e7abbf099ec37b9d738';
+String _$homeObjectsHash() => r'aa7c2be0146e4be35d722db667abfe003abb1027';
 
 /// The zone rail: the same zones, counts and names as Search's
 /// `BROWSE BY ZONE`, so the two can never disagree.
