@@ -32,6 +32,7 @@ class InlineValue extends StatelessWidget {
     this.textAlign = TextAlign.start,
     this.maxLines = 1,
     this.resting,
+    this.hint,
   });
 
   final TextEditingController controller;
@@ -49,9 +50,13 @@ class InlineValue extends StatelessWidget {
   /// shrinks to fit.
   final Widget? resting;
 
+  /// Shown dim while editing an empty value, so a field with nothing in it
+  /// yet still reads as a field.
+  final String? hint;
+
   @override
   Widget build(BuildContext context) {
-    final child = isEditing
+    final editor = isEditing
         ? EditableText(
             controller: controller,
             focusNode: focusNode,
@@ -64,14 +69,36 @@ class InlineValue extends StatelessWidget {
             cursorWidth: 2,
             scrollPadding: _scrollPadding,
           )
-        : resting ??
+        : null;
+    final hint = this.hint;
+    final child = editor == null
+        ? resting ??
               Text(
                 controller.text,
                 style: style,
                 textAlign: textAlign,
                 maxLines: maxLines,
                 overflow: TextOverflow.ellipsis,
-              );
+              )
+        : hint == null
+        ? editor
+        : Stack(
+            children: [
+              ValueListenableBuilder(
+                valueListenable: controller,
+                builder: (context, value, _) => value.text.isEmpty
+                    ? Text(
+                        hint,
+                        style: style.copyWith(color: SpecColors.ink45),
+                        textAlign: textAlign,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              editor,
+            ],
+          );
 
     return Stack(
       clipBehavior: Clip.none,

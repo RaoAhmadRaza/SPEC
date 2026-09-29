@@ -32,6 +32,9 @@ const _flashDuration = Duration(milliseconds: 600);
 const _dateSwapDuration = Duration(milliseconds: 240);
 
 const _gapChips = 8.0;
+
+/// What a field added with a value but no label is filed under.
+const _defaultNewLabel = 'DETAIL';
 const _pillDip = 0.94;
 const _hitInset = (ObjectMetrics.minHitBox - ObjectMetrics.circle) / 2;
 
@@ -172,6 +175,10 @@ class _ObjectScreenState extends State<ObjectScreen>
   late final TextEditingController _notes;
   late final FocusNode _specFocus = FocusNode();
   late List<FocusNode> _fieldFocus;
+
+  /// The empty cells Edit opens after the fields. Made on Edit, gone on
+  /// SAVE or Cancel.
+  List<NewSpecCell> _newCells = const [];
   late final FocusNode _purchasedFocus = FocusNode();
   late final FocusNode _replacedFocus = FocusNode();
   late final FocusNode _notesFocus = FocusNode();
@@ -311,6 +318,9 @@ class _ObjectScreenState extends State<ObjectScreen>
     for (final c in [_spec, _purchased, _replaced, _notes, ..._fields]) {
       c.dispose();
     }
+    for (final cell in _newCells) {
+      cell.dispose();
+    }
     for (final f in [
       _specFocus,
       _purchasedFocus,
@@ -358,7 +368,15 @@ class _ObjectScreenState extends State<ObjectScreen>
   }
 
   void _startEditing() {
-    setState(() => _isEditing = true);
+    setState(() {
+      _isEditing = true;
+      // The rest of the last row, or a fresh row when it is full, so there
+      // is always somewhere to add a field.
+      _newCells = [
+        for (var i = 0; i < _openCellCount(_view.fields.length); i++)
+          NewSpecCell(),
+      ];
+    });
     _rules.forward();
     _labels.forward();
     _specFocus.requestFocus();
@@ -368,8 +386,22 @@ class _ObjectScreenState extends State<ObjectScreen>
     FocusScope.of(context).unfocus();
     _rules.reverse();
     _labels.reverse();
-    setState(() => _isEditing = false);
+    final closing = _newCells;
+    setState(() {
+      _isEditing = false;
+      _newCells = const [];
+    });
+    // After the frame that stops drawing them: their editors still hold
+    // these controllers until then.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final cell in closing) {
+        cell.dispose();
+      }
+    });
   }
+
+  static int _openCellCount(int fields) =>
+      kTableColumns - fields % kTableColumns;
 
   void _cancelEditing() {
     _syncControllers();
@@ -390,6 +422,12 @@ class _ObjectScreenState extends State<ObjectScreen>
             label: _view.fields[i].label,
             value: _fields[i].text.trim(),
           ),
+        for (final cell in _newCells)
+          if (!cell.isBlank)
+            SpecAttribute(
+              label: _newLabel(cell.label.text),
+              value: cell.value.text.trim(),
+            ),
       ],
       purchasedFrom: purchased.isEmpty ? null : purchased,
       lastReplaced: replacedText.isEmpty
@@ -409,6 +447,7 @@ class _ObjectScreenState extends State<ObjectScreen>
         subtitle: _view.subtitle,
         fields: edits.fields,
         mainPhoto: _view.mainPhoto,
+        isMainPhotoBundled: _view.isMainPhotoBundled,
         detailPhoto: _view.detailPhoto,
         lastReplaced: edits.lastReplaced,
         purchasedFrom: edits.purchasedFrom,
@@ -420,6 +459,13 @@ class _ObjectScreenState extends State<ObjectScreen>
     _syncControllers();
     _endEditing();
     widget.onSave?.call(edits);
+  }
+
+  /// Table labels are capitals, like `BASE`. A value typed with no label
+  /// still keeps, under a generic one, rather than being thrown away.
+  static String _newLabel(String typed) {
+    final label = typed.trim().toUpperCase();
+    return label.isEmpty ? _defaultNewLabel : label;
   }
 
   void _onBack() {
@@ -448,8 +494,10 @@ class _ObjectScreenState extends State<ObjectScreen>
 
   void _photoMenu(int slot, Rect _) {
     final photo = slot == kMainSlot ? _view.mainPhoto : _view.detailPhoto;
-    // An empty slot has nothing to replace or remove.
+    // An empty slot has nothing to replace or remove, and neither does the
+    // library's bundled picture: there is no file behind it.
     if (photo == null) return;
+    if (slot == kMainSlot && _view.isMainPhotoBundled) return;
     HapticFeedback.selectionClick();
     showObjectSheet(
       context,
@@ -623,6 +671,7 @@ class _ObjectScreenState extends State<ObjectScreen>
           editRule: _ruleFade,
           ruleGrow: _tableRules,
           wrapCell: (index, child) => _in(_cell(index), child, dy: 10),
+          newCells: _newCells,
         ),
         const SizedBox(height: ObjectMetrics.gap),
         PhotoPair(

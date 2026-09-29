@@ -12,6 +12,25 @@ const _cellGap = 8.0;
 const _cellPad = 16.0;
 const _ruleWeight = 1.0;
 
+/// One cell Edit opens up for a field that does not exist yet: a label and
+/// a value, both typed.
+class NewSpecCell {
+  final label = TextEditingController();
+  final value = TextEditingController();
+  final labelFocus = FocusNode();
+  final valueFocus = FocusNode();
+
+  /// Blank cells add nothing on SAVE.
+  bool get isBlank => label.text.trim().isEmpty && value.text.trim().isEmpty;
+
+  void dispose() {
+    label.dispose();
+    value.dispose();
+    labelFocus.dispose();
+    valueFocus.dispose();
+  }
+}
+
 /// The three-column attribute block, ruled top and bottom.
 ///
 /// The rules are widgets rather than a `Border` because they grow from the
@@ -26,9 +45,14 @@ class SpecTable extends StatelessWidget {
     required this.editRule,
     required this.ruleGrow,
     required this.wrapCell,
+    this.newCells = const [],
   });
 
   final List<SpecAttribute> fields;
+
+  /// The empty cells Edit fills out after [fields], so a field can be added.
+  /// Drawn only while editing.
+  final List<NewSpecCell> newCells;
   final List<TextEditingController> controllers;
   final List<FocusNode> focusNodes;
   final bool isEditing;
@@ -41,8 +65,10 @@ class SpecTable extends StatelessWidget {
 
   final Widget Function(int index, Widget child) wrapCell;
 
+  int get _cellCount => fields.length + (isEditing ? newCells.length : 0);
+
   int get _rowCount =>
-      fields.isEmpty ? 1 : (fields.length + kTableColumns - 1) ~/ kTableColumns;
+      _cellCount == 0 ? 1 : (_cellCount + kTableColumns - 1) ~/ kTableColumns;
 
   @override
   Widget build(BuildContext context) {
@@ -90,15 +116,22 @@ class SpecTable extends StatelessWidget {
                   ),
                 ),
               ),
-        child: index < fields.length
-            ? _CellContent(
-                label: fields[index].label,
-                controller: controllers[index],
-                focusNode: focusNodes[index],
-                isEditing: isEditing,
-                editRule: editRule,
-              )
-            : const SizedBox.shrink(),
+        child: switch (index - fields.length) {
+          < 0 => _CellContent(
+            label: fields[index].label,
+            controller: controllers[index],
+            focusNode: focusNodes[index],
+            isEditing: isEditing,
+            editRule: editRule,
+          ),
+          final slot when isEditing && slot < newCells.length =>
+            _NewCellContent(
+              index: slot,
+              cell: newCells[slot],
+              editRule: editRule,
+            ),
+          _ => const SizedBox.shrink(),
+        },
       ),
     );
   }
@@ -138,6 +171,49 @@ class _CellContent extends StatelessWidget {
           style: ObjectText.tableValue,
           isEditing: isEditing,
           rule: editRule,
+        ),
+      ],
+    );
+  }
+}
+
+/// An empty cell while editing: the label typed where a label sits, the
+/// value where a value sits, each hinted until something is in it.
+class _NewCellContent extends StatelessWidget {
+  const _NewCellContent({
+    required this.index,
+    required this.cell,
+    required this.editRule,
+  });
+
+  final int index;
+  final NewSpecCell cell;
+  final Animation<double> editRule;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InlineValue(
+          key: ValueKey('new-field-label-$index'),
+          controller: cell.label,
+          focusNode: cell.labelFocus,
+          style: ObjectText.tableLabel,
+          isEditing: true,
+          rule: editRule,
+          hint: 'LABEL',
+        ),
+        const SizedBox(height: _cellGap),
+        InlineValue(
+          key: ValueKey('new-field-value-$index'),
+          controller: cell.value,
+          focusNode: cell.valueFocus,
+          style: ObjectText.tableValue,
+          isEditing: true,
+          rule: editRule,
+          hint: 'Add',
         ),
       ],
     );

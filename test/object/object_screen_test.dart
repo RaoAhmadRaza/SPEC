@@ -118,6 +118,12 @@ final _onePixelPng = Uint8List.fromList(const [
   0x82,
 ]);
 
+/// The editor inside one of the empty cells Edit opens up.
+Finder _newCell(String part, int index) => find.descendant(
+  of: find.byKey(ValueKey('new-field-$part-$index')),
+  matching: find.byType(EditableText),
+);
+
 Future<void> _pump(
   WidgetTester tester, {
   ObjectView object = _bulb,
@@ -665,6 +671,73 @@ void main() {
       expect(saved!.notes, isNull);
       expect(find.byType(EditableText), findsNothing);
       expect(find.text('E27'), findsOneWidget);
+    });
+
+    testWidgets('an object with no fields gains one from an empty cell', (
+      tester,
+    ) async {
+      // Arrange
+      ObjectEdits? saved;
+      await _pump(
+        tester,
+        object: const ObjectView(id: 9, zone: 'HOME', spec: 'DA29-00020B'),
+        onSave: (edits) => saved = edits,
+      );
+      await tester.tap(find.text('Edit'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      // Act: the first of the three empty cells; the other two stay blank.
+      await tester.enterText(_newCell('label', 0), ' brand ');
+      await tester.enterText(_newCell('value', 0), 'Samsung');
+      await tester.tap(find.text('SAVE'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      // Assert: labels read in the table's capitals; blank cells add nothing.
+      expect(saved!.fields.map((f) => (f.label, f.value)), [
+        ('BRAND', 'Samsung'),
+      ]);
+      expect(find.text('BRAND'), findsOneWidget);
+      expect(find.text('Samsung'), findsOneWidget);
+    });
+
+    testWidgets('a full row offers a fresh one while editing', (tester) async {
+      // Arrange
+      ObjectEdits? saved;
+      await _pump(tester, onSave: (edits) => saved = edits);
+      expect(find.byKey(const ValueKey('new-field-label-0')), findsNothing);
+      await tester.tap(find.text('Edit'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      // Act: a value with no label still keeps, under a generic one.
+      await tester.enterText(_newCell('value', 1), 'Frosted');
+      await tester.tap(find.text('SAVE'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      // Assert
+      expect(saved!.fields.map((f) => (f.label, f.value)), [
+        ('BASE', 'Bayonet'),
+        ('POWER', '9W'),
+        ('TEMP', '2700K'),
+        ('DETAIL', 'Frosted'),
+      ]);
+      expect(find.byKey(const ValueKey('new-field-label-0')), findsNothing);
+    });
+
+    testWidgets('Cancel drops cells that were being added', (tester) async {
+      // Arrange
+      ObjectEdits? saved;
+      await _pump(tester, onSave: (edits) => saved = edits);
+      await tester.tap(find.text('Edit'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.enterText(_newCell('value', 0), 'Frosted');
+
+      // Act
+      await tester.tap(find.text('Cancel'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      // Assert
+      expect(saved, isNull);
+      expect(find.text('Frosted'), findsNothing);
     });
 
     testWidgets('Cancel restores what was there', (tester) async {
